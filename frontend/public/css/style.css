@@ -1,0 +1,121 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:ital,wght@0,100;0,300;0,400;0,500;0,700;0,900;1,100;1,300;1,400;1,500;1,700;1,900&display=swap');
+
+* {
+    font-family: 'Roboto', sans-serif;
+}
+
+p {
+    font-size: 14px;
+}
+
+h1 {
+    font-size: 30px;
+    font-weight: bold;
+}
+
+.box {
+    position: absolute;
+    width: 1038px;
+    height: 861px;
+    top: -65px;
+    right: 0;
+    z-index: 1
+}
+
+.f14table {
+    font-size: 14px;
+}
+
+#content {
+    z-index: 9;
+}
+
+.text-black {
+    color: #222222;
+}
+
+.bg-gadgets-orange {
+    background-color: #FDDF02;
+}
+
+.sidebar-gadgets-text {
+    color: #2577BB;
+}
+
+.bg-orange {
+    background-color: #ddc300;
+}
+
+.profile-userpic img {
+    height: 140px;
+    width: 140px;
+}
+
+.text-dark {
+    color: #222 !important;
+}
+
+.nav-link.active {
+    background-color: #2577BB !important;
+    color: #fff !important;
+}
+
+.score_level {
+    font-size: 32px;
+}
+
+.modal_font {
+    font-size: 18px !important;
+}
+
+.message_area textarea {
+    min-height: 300px;
+}
+
+.cursor-pointer {
+    cursor: pointer;
+}
+
+.show_hide_pass {
+    position: absolute;
+    right: 20px;
+    bottom: 120px;
+    color: #222;
+}
+
+.col_pagetitle,
+.col_pagetitle2 {
+    width: auto;
+}
+
+
+/**** Animation Loading *****/
+
+.element2 {
+    height: 50px;
+    width: 100%;
+}
+
+.gradient {
+    animation-duration: 1.8s;
+    animation-fill-mode: forwards;
+    animation-iteration-count: infinite;
+    animation-name: placeHolderShimmer;
+    animation-timing-function: linear;
+    background: #f6f7f8;
+    background: linear-gradient(to right, #fafafa 8%, #f4f4f4 38%, #fafafa 54%);
+    background-size: 1000px 640px;
+
+    position: relative;
+
+}
+
+@keyframes placeHolderShimmer {
+    0% {
+        background-position: -468px 0
+    }
+
+    100% {
+        background-position: 468px 0
+    }
+}
