@@ -322,7 +322,7 @@ app.post("/login", async (req, res) => {
                 id: user._id,
             },
         };
-        const token = jwt.sign(data, JWT_SECRET, { expiresIn: '30m' });
+        const token = jwt.sign(data, JWT_SECRET, { expiresIn: '60m' });
 
         if (res.status(201)) {
             return res.json({ status: "ok", token: token });
@@ -900,23 +900,34 @@ app.get("/allnotifications", async (req, res) => {
 
 // creating the user order details byupdating the user details
 app.post('/create-order', fetchUser, async (req, res) => {
-    const userID = req.user.id;
-    const wdyltd = req.body.wdyltd;
     try {
-        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        const userID = req.user.id;
+        const wdyltd = req.body.wdyltd;
+        let orderId = uid();
+        const userExist = await User.findOne({ _id: userID }, { password: 0 });
         // res.send(userExist);
         if (userExist) {
             const orderdetails = {
                 whatdoyouliketodo: wdyltd,
-                orderId: uid()
+                orderId: orderId,
+                email: userExist.email,
+                phone: userExist.phone,
+                userID: userExist.id,
             }
 
-            const data = await User.findByIdAndUpdate(
-                userID,
-                { $push: { orderDetails: orderdetails } },
-                { new: true }
+            const data = await Orders.create(
+                orderdetails,
             )
             if (data) {
+
+                await User.findByIdAndUpdate(
+                    userExist.id,
+                    {
+                        '$set': {
+                            'currentOrderId': orderId
+                        }
+                    }
+                )
                 res.status(200).json({ message: "order generated successfully", status: "ok" })
             } else {
 
