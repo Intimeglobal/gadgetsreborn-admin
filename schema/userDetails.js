@@ -4,7 +4,7 @@ const UserDetailsSchema = new mongoose.Schema(
     {
         userId: { type: String, default: getRandomIntInclusive() },
         fname: { type: String, default: "" },
-        username: { type: String, default: "", required: true },
+        username: { type: String, default: "" },
         email: { type: String, unique: true },
         phone: { type: String, unique: true },
         userType: { type: String, default: 'User' },
@@ -24,7 +24,7 @@ const UserDetailsSchema = new mongoose.Schema(
         orderDetails: [
             {
                 whatdoyouliketodo: { type: String, default: "none" },
-                orderId: { type: mongoose.Schema.Types.ObjectId },
+                orderId: { type: String, default: "" },
                 orderprice: { type: Number, default: 0 },
                 dueAmount: { type: Number, default: 0 },
                 lastorderDate: { type: Date, default: Date.now },

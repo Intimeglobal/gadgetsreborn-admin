@@ -9,9 +9,13 @@ const multer = require('multer');
 app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: false }));
 const Mailgen = require('mailgen');
+const twilio = require('twilio');
+const { uid } = require('uid');
+const stripe = require('stripe')("sk_test_51O8OqLKUlkWJEm6XlQMc8CwaQ7Zml4SrhAzMEqQ7WBO6xiO4NUtYosvbR0lbb1Ra6bcEeXLpp3HNkuJJ12OPd90r00tLMZikk8");
 
 
 let map = new Map([]);
+// let map2 = new Map([]);
 
 
 
@@ -22,10 +26,12 @@ const jwt = require("jsonwebtoken");
 var nodemailer = require('nodemailer');
 
 const JWT_SECRET = process.env.JWT_SECRET;
+const fetchUser = require("./middleware/fetchUser");
 
 const cors = require("cors");
+const { restart } = require("nodemon");
 app.use(cors());
-
+app.use(express.json())
 // Create a storage engine for multer
 const storage = multer.memoryStorage();
 
@@ -59,7 +65,10 @@ const Models = mongoose.model("ModelInfo");
 const Orders = mongoose.model("OrdersInfo");
 const Warranty = mongoose.model("WarrantyInfo");
 const Notification = mongoose.model("NotificationInfo");
-
+const accountSid = "AC76ab0a9ce0f377a72c7c1ca6dc8c432a";
+const authToken = process.env.TWILIO_AUTH_TOKEN;
+const client = twilio(accountSid, authToken);
+const servicesid = 'VA3072be8c6102f371a7fcd7ffdc7a2b46'
 
 // function for send email verification 
 const sendEmailVerification = async (recipientEmail) => {
@@ -132,17 +141,8 @@ app.post("/register", async (req, res) => {
         // const oldUsername = await User.findOne({ username });
         const oldPhone = await User.findOne({ phone });
 
-        // image.create({ image: base64 });
-        if (oldEmail) {
-            return res.json({ error: "Email Already Registered" });
-        }
-        // if (oldUsername) {
-        //     return res.json({ error: "Username Already Exists" });
-        // }
-        if (oldPhone) {
-            return res.json({ error: "Phone Number Already Exists" });
-        }
-        await User.create({
+        // image.create({ image: base64 }
+        const user = await User.create({
             fname,
             username,
             email,
@@ -151,11 +151,18 @@ app.post("/register", async (req, res) => {
             image: base64,
             password: encryptedPassword,
         });
-        res.send({ status: "ok" });
+
+        if (user) {
+            res.status(200).json({ message: "user created", status: "ok" });
+        } else {
+            res.status(200).json({ message: "problem in creating the user", status: "ok" });
+        }
+
     } catch (error) {
-        res.send({ status: "error", error });
+        res.send({ message: "error", error });
     }
 });
+
 
 // API for email verification
 
@@ -171,16 +178,94 @@ app.post('/email-verification', async (req, res) => {
         }
         // checking whether user exist
         const userExist = await User.findOne({ email: email });
-        if (userExist)
+        if (userExist) {
+            console.log("User Exist");
             return res.status(422).json({ message: "User Already Exist" });
-
+        }
         await sendEmailVerification(email);
 
         // for time out of OTP after 60 seconds
         OTPTIMEOUT(email);
-        res.status(200).json({ message: "OTP sent Successfully" });
+        res.status(200).json({ message: "OTP sent Successfully", status: "ok" });
     } catch (error) {
         console.log(error.message);
+    }
+})
+
+// for OTP verification
+app.post('/otp-verification', async (req, res) => {
+    const { otp, email } = req.body;
+    try {
+        console.log(otp, email);
+
+        // Check if the email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "User already exists" });
+        }
+
+        // Check if the OTP is valid
+        const storedOTP = map.get(email);
+        if (storedOTP && (+otp) === storedOTP) {
+            console.log("Verification done");
+            res.status(200).json({ message: "Verification done", status: "ok" });
+        } else {
+            res.status(400).json({ message: "Wrong OTP" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// sending otp using smsglobal
+app.post('/mobile-otp', async (req, res) => {
+    try {
+        console.log("reached");
+        const phonenumber = "+" + req.body.phone;
+
+        const oldPhone = await User.findOne({ phone: req.body.phone });
+
+        if (oldPhone) {
+            return res.status(400).json({ message: "phone number already exist" });
+        }
+
+        const response = await client.verify.v2.services(servicesid)
+            .verifications
+            .create({ to: phonenumber, channel: 'sms' });
+        console.log(response);
+        if (response) {
+            res.status(200).json({ message: "OTP sent successfully", status: "ok" })
+        } else {
+            res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+        }
+
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+    }
+});
+
+app.post('/otp-mobile-verification', async (req, res) => {
+    try {
+        // console.log("reached");
+        const phonenumber = "+" + req.body.phone;
+        const otp = req.body.otp;
+        // const otp = Math.floor(Math.random() * 100000) + 100000;
+        console.log(phonenumber);
+
+        const response = await client.verify.v2.services(servicesid)
+            .verificationChecks
+            .create({ to: phonenumber, code: otp })
+
+        if (response.status === "approved") {
+            res.status(200).json({ message: response.status, status: "ok" });
+        } else {
+            res.status(200).json({ message: "OTP not match", status: "ok" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error", error });
     }
 })
 
@@ -231,16 +316,16 @@ app.post("/login", async (req, res) => {
         return res.send({ error: "User Not Found" });
     }
     if (await bcrypt.compare(password, user.password)) {
-        const token = jwt.sign(
-            { email: user.email, userType: user.userType },
-            JWT_SECRET,
-            {
-                expiresIn: "30m",
-            }
-        );
+
+        const data = {
+            user: {
+                id: user._id,
+            },
+        };
+        const token = jwt.sign(data, JWT_SECRET, { expiresIn: '30m' });
 
         if (res.status(201)) {
-            return res.json({ status: "ok", data: token });
+            return res.json({ status: "ok", token: token });
         } else {
             return res.json({ error: "error" });
         }
@@ -808,6 +893,110 @@ app.get("/allnotifications", async (req, res) => {
     try {
         const allNotifications = await Notification.find({});
         res.send({ status: "ok", data: allNotifications });
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+// creating the user order details byupdating the user details
+app.post('/create-order', fetchUser, async (req, res) => {
+    const userID = req.user.id;
+    const wdyltd = req.body.wdyltd;
+    try {
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        // res.send(userExist);
+        if (userExist) {
+            const orderdetails = {
+                whatdoyouliketodo: wdyltd,
+                orderId: uid()
+            }
+
+            const data = await User.findByIdAndUpdate(
+                userID,
+                { $push: { orderDetails: orderdetails } },
+                { new: true }
+            )
+            if (data) {
+                res.status(200).json({ message: "order generated successfully", status: "ok" })
+            } else {
+
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+
+});
+
+
+// creating the stripe payment integration 
+app.get('/diagnos-payment', fetchUser, async (req, res) => {
+    const userID = req.user.id;
+    try {
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        // res.send(userExist);
+        if (userExist) {
+            // 
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: 2000,
+                currency: 'eur',
+                capture_method: 'manual',
+                payment_method_types: ['card'],
+            });
+            const intent = await stripe.paymentIntents.confirm(
+                paymentIntent.id,
+                { payment_method: 'pm_card_visa' }
+            );
+            // const amount = (2000 * 0.3);
+            // console.log(amount);
+            // const intent = await stripe.paymentIntents.capture(paymentIntent.id, {
+            //     amount_to_capture: amount,
+            // })
+
+            if (paymentIntent) {
+                res.status(200).json({ paymentInfo: intent })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+// creating the stripe payment integration 
+app.post('/catpure-payment', fetchUser, async (req, res) => {
+    const userID = req.user.id;
+    const pid = req.body.pid;
+    try {
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        // res.send(userExist);
+        if (userExist) {
+            // 
+            // const amount = (2000 * 0.3);
+            // console.log(amount);
+            // const intent = await stripe.paymentIntents.capture(pid, {
+            //     amount_to_capture: amount,
+            // })
+
+            const intent = await stripe.paymentIntents.cancel(pid);
+
+            if (intent) {
+                res.status(200).json({ paymentInfo: intent })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
     } catch (error) {
         console.log(error);
     }
