@@ -86,7 +86,8 @@ const OrdersDetailsScehma = new mongoose.Schema(
             }
         ],
         work: { type: Array, 'default': [] },
-        address: { type: String, default: "" },
+        pickupdrop: { type: String, default: "" },
+        address: { type: Object, default: {} },
         technicianAllotted: { type: String, default: "" },
     },
     {

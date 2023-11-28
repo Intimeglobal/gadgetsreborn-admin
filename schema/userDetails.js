@@ -21,7 +21,18 @@ const UserDetailsSchema = new mongoose.Schema(
                 createdAt: { type: Date, default: Date.now }
             }
         ],
-
+        addresses: [
+            {
+                name: { type: String, default: "" },
+                phone: { type: String, default: "" },
+                city: { type: String, default: "" },
+                country: { type: String, default: "" },
+                houseno: { type: String, default: "" },
+                streetaddress: { type: String, default: "" },
+                landmark: { type: String, default: "" },
+                type: { type: String, default: "" },
+            }
+        ],
         currentOrderId: { type: String, default: "" },
         currentBalance: { type: Number, default: 0 }
     },

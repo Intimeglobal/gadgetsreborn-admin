@@ -30,6 +30,7 @@ const fetchUser = require("./middleware/fetchUser");
 
 const cors = require("cors");
 const { restart } = require("nodemon");
+const { type } = require("os");
 app.use(cors());
 app.use(express.json())
 // Create a storage engine for multer
@@ -944,23 +945,28 @@ app.post('/create-order', fetchUser, async (req, res) => {
 
 
 // creating the stripe payment integration 
-app.get('/diagnos-payment', fetchUser, async (req, res) => {
-    const userID = req.user.id;
+app.get('/diagnos-payment', async (req, res) => {
+    // const userID = req.user.id;
     try {
-        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        // const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
         // res.send(userExist);
+        userExist = true;
         if (userExist) {
             // 
             const paymentIntent = await stripe.paymentIntents.create({
-                amount: 2000,
-                currency: 'eur',
-                capture_method: 'manual',
+                amount: 1000,
+                currency: 'usd',
                 payment_method_types: ['card'],
+                payment_method: 'pm_card_visa',
+                confirm: true,
+                capture_method: 'manual',
+                expand: ['latest_charge'],
+                payment_method_options: {
+                    card: {
+                        request_multicapture: 'if_available',
+                    },
+                },
             });
-            const intent = await stripe.paymentIntents.confirm(
-                paymentIntent.id,
-                { payment_method: 'pm_card_visa' }
-            );
             // const amount = (2000 * 0.3);
             // console.log(amount);
             // const intent = await stripe.paymentIntents.capture(paymentIntent.id, {
@@ -968,7 +974,7 @@ app.get('/diagnos-payment', fetchUser, async (req, res) => {
             // })
 
             if (paymentIntent) {
-                res.status(200).json({ paymentInfo: intent })
+                res.status(200).json({ paymentInfo: paymentIntent })
             } else {
                 res.status(200).json({ message: "something went wrong" })
             }
@@ -998,6 +1004,141 @@ app.post('/catpure-payment', fetchUser, async (req, res) => {
             // })
 
             const intent = await stripe.paymentIntents.cancel(pid);
+
+            if (intent) {
+                res.status(200).json({ paymentInfo: intent })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+
+// Pick Up / Drop Select 
+app.post('/pickdrop', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 })
+        const pickdrop = req.body.pickdrop;
+
+
+        if (userExist) {
+            const orderID = userExist.currentOrderId;
+            const response = await Orders.findOneAndUpdate({ orderId: orderID }, {
+                '$set': {
+                    'pickupdrop': pickdrop
+                }
+            })
+
+            if (response) {
+                res.status(200).json({ message: pickdrop, status: 'ok' })
+            }
+
+        } else {
+            res.status(200).json({ message: "User does not Exist" });
+        }
+    } catch (error) {
+        res.status(400).json({ message: "something went wrong" });
+    }
+})
+
+
+// fetch all adresses
+app.get('/get-addresses', fetchUser, async (req, res) => {
+
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        // res.send(userExist);
+        if (userExist) {
+            res.status(200).json({ data: userExist.addresses, status: "ok" });
+        } else {
+            res.status(400).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+// add the address in the userdetails
+app.post('/add-address', fetchUser, async (req, res) => {
+    try {
+        console.log(req.body.address);
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        if (userExist) {
+            const { name,
+                phone,
+                city,
+                country,
+                houseno,
+                streetaddress,
+                landmark,
+                type, } = req.body.address;
+
+
+            const address = {
+                name: name,
+                phone: phone,
+                city: city,
+                country: country,
+                houseno: houseno,
+                streetaddress: streetaddress,
+                landmark: landmark,
+                type: type,
+            }
+
+            const response = await User.findByIdAndUpdate(userID, {
+                '$push': {
+                    addresses: address
+                }
+            })
+
+            if (response) {
+                res.status(200).json({ message: "address added successfully", status: 'ok' })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+app.get('/user-details', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        if (userExist) {
+            res.status(200).json({ data: userExist, status: 'ok' })
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+
+// update the address in the current order
+app.post('/addorderaddress', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        if (userExist) {
+
+
 
             if (intent) {
                 res.status(200).json({ paymentInfo: intent })
