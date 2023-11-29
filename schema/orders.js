@@ -89,6 +89,8 @@ const OrdersDetailsScehma = new mongoose.Schema(
         pickupdrop: { type: String, default: "" },
         address: { type: Object, default: {} },
         technicianAllotted: { type: String, default: "" },
+        pickupdate: { type: String, },
+        pickuptime: { type: String, }
     },
     {
         collection: "OrdersInfo",

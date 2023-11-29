@@ -1132,16 +1132,64 @@ app.get('/user-details', fetchUser, async (req, res) => {
 
 
 // update the address in the current order
-app.post('/addorderaddress', fetchUser, async (req, res) => {
+app.post('/add-order-address', fetchUser, async (req, res) => {
     try {
         const userID = req.user.id;
         const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        const address = req.body.address;
+
+        if (!address) {
+            return res.status(400).json({ message: "please select the address" });
+        }
+
         if (userExist) {
 
+            const response = await Orders.findOneAndUpdate({ orderId: userExist.currentOrderId }, {
+                '$set': {
+                    'address': address
+                }
+            })
+
+            if (response) {
+                res.status(200).json({ message: "address added successfully", status: "ok" })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
 
 
-            if (intent) {
-                res.status(200).json({ paymentInfo: intent })
+// updating the date and time in the order
+app.post('/add-pickup-date', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+        const pickupdate = req.body.pickupdate;
+        const pickuptime = req.body.pickuptime;
+
+        console.log(req.body);
+
+        // if (!pickupdate || !pickuptime) {
+        //     return res.status(400).json({ message: "please select the date and time" });
+        // }
+
+        if (userExist) {
+
+            const response = await Orders.findOneAndUpdate({ orderId: userExist.currentOrderId }, {
+                '$set': {
+                    'pickupdate': pickupdate,
+                    'pickuptime': pickuptime
+                }
+            })
+
+            if (response) {
+                res.status(200).json({ message: "date and time added successfully", status: "ok" })
             } else {
                 res.status(200).json({ message: "something went wrong" })
             }
