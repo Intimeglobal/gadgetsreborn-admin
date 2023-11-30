@@ -11,8 +11,9 @@ app.use(express.urlencoded({ extended: false }));
 const Mailgen = require('mailgen');
 const twilio = require('twilio');
 const { uid } = require('uid');
-const stripe = require('stripe')("sk_test_51O8OqLKUlkWJEm6XlQMc8CwaQ7Zml4SrhAzMEqQ7WBO6xiO4NUtYosvbR0lbb1Ra6bcEeXLpp3HNkuJJ12OPd90r00tLMZikk8");
+const stripe = require('stripe')("sk_test_51O8OqLKUlkWJEm6Xm5RFpMzVx1CUPMZfmuYs3PSGv2ogsGsGmeUlcVMbNy2CYMlnZ8UY9a4R2uSDzapP2fiH9JEY00yTdUptIK");
 
+const monthlyDiagnose = "price_1OI7hYKUlkWJEm6XdPl4n2Mu";
 
 let map = new Map([]);
 // let map2 = new Map([]);
@@ -164,9 +165,7 @@ app.post("/register", async (req, res) => {
     }
 });
 
-
 // API for email verification
-
 app.post('/email-verification', async (req, res) => {
     try {
         const { email } = req.body;
@@ -269,7 +268,6 @@ app.post('/otp-mobile-verification', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error", error });
     }
 })
-
 
 app.post('/mobile-email-verification', async (req, res) => {
     try {
@@ -485,30 +483,6 @@ app.get("/getAllUser", async (req, res) => {
         res.send({ status: "ok", data: allUser });
     } catch (error) {
         console.log(error);
-    }
-});
-
-// Fetch Loggedin user by Data
-app.post("/getloginuserdata", async (req, res) => {
-    const { token } = req.body;
-
-    try {
-        const user = jwt.verify(token, JWT_SECRET);
-        const useremail = user.email;
-        User.findOne({ email: useremail })
-            .then((data) => {
-                if (data) {
-                    res.status(200).send({ status: "ok", data: data });
-                } else {
-                    res.status(404).send({ status: "error", message: "User not found" });
-                }
-            })
-            .catch((error) => {
-                res.status(500).send({ status: "error", message: "Internal server error" });
-                console.error(error);
-            });
-    } catch (error) {
-        res.status(401).send({ status: "error", message: "Invalid or expired token" });
     }
 });
 
@@ -943,7 +917,6 @@ app.post('/create-order', fetchUser, async (req, res) => {
 
 });
 
-
 // creating the stripe payment integration 
 app.get('/diagnos-payment', async (req, res) => {
     // const userID = req.user.id;
@@ -1019,7 +992,6 @@ app.post('/catpure-payment', fetchUser, async (req, res) => {
     }
 })
 
-
 // Pick Up / Drop Select 
 app.post('/pickdrop', fetchUser, async (req, res) => {
     try {
@@ -1047,7 +1019,6 @@ app.post('/pickdrop', fetchUser, async (req, res) => {
         res.status(400).json({ message: "something went wrong" });
     }
 })
-
 
 // fetch all adresses
 app.get('/get-addresses', fetchUser, async (req, res) => {
@@ -1130,7 +1101,6 @@ app.get('/user-details', fetchUser, async (req, res) => {
     }
 })
 
-
 // update the address in the current order
 app.post('/add-order-address', fetchUser, async (req, res) => {
     try {
@@ -1164,7 +1134,6 @@ app.post('/add-order-address', fetchUser, async (req, res) => {
     }
 })
 
-
 // updating the date and time in the order
 app.post('/add-pickup-date', fetchUser, async (req, res) => {
     try {
@@ -1173,11 +1142,9 @@ app.post('/add-pickup-date', fetchUser, async (req, res) => {
         const pickupdate = req.body.pickupdate;
         const pickuptime = req.body.pickuptime;
 
-        console.log(req.body);
-
-        // if (!pickupdate || !pickuptime) {
-        //     return res.status(400).json({ message: "please select the date and time" });
-        // }
+        if (!pickupdate || !pickuptime) {
+            return res.status(400).json({ message: "please select the date and time" });
+        }
 
         if (userExist) {
 
@@ -1188,8 +1155,10 @@ app.post('/add-pickup-date', fetchUser, async (req, res) => {
                 }
             })
 
+
+
             if (response) {
-                res.status(200).json({ message: "date and time added successfully", status: "ok" })
+                res.status(200).json({ message: "date and time added successfully", status: "ok", orderID: userExist.currentOrderId })
             } else {
                 res.status(200).json({ message: "something went wrong" })
             }
@@ -1201,6 +1170,126 @@ app.post('/add-pickup-date', fetchUser, async (req, res) => {
         console.log(error);
     }
 })
+
+// fetching the current order details
+app.get('/current-order', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0, _id: 0 });
+
+
+        if (userExist) {
+
+            const response = await Orders.findOne({ orderId: userExist.currentOrderId })
+            console.log(response);
+            if (response) {
+                res.status(200).json({ data: response, status: "ok", })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+// fetch all the order of the user
+app.get('/all-orders', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0 });
+
+
+        if (userExist) {
+            // console.log(userExist.id);
+            const response = await Orders.find({ userID: userExist.id })
+            // console.log(response);
+            if (response) {
+                res.status(200).json({ data: response, status: "ok", })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+// fethcing the particular order
+app.get('/fetch-order/:ID', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0 });
+        const orderID = req.params.ID;
+
+
+        if (userExist) {
+            // console.log(userExist.id);
+            const response = await Orders.findOne({ orderId: orderID })
+            // console.log(response);
+            if (response) {
+                res.status(200).json({ data: response, status: "ok", })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+// creating the susbcription for diagnosing monthly
+app.get('/create-checkout-session', fetchUser, async (req, res) => {
+    try {
+
+        const userid = req.user.id;
+        const user = await User.findOne({ _id: userid });
+
+        if (user) {
+            try {
+                const session = await stripeSession(user.email);
+                res.status(200).json({ data: session });
+            } catch (error) {
+                res.status(404).json({ message: "problem in creating the subscription" });
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+const stripeSession = async (email) => {
+    try {
+        const session = await stripe.checkout.sessions.create({
+            mode: "subscription",
+            payment_method_types: ["card"],
+            line_items: [
+                {
+                    price: monthlyDiagnose,
+                    quantity: 1
+                },
+            ],
+            success_url: "newapp://PaymentSuccess",
+            cancel_url: "http://206.189.143.222:3000/cancel",
+            customer_email: email,
+
+        });
+        return session;
+    } catch (error) {
+        return error;
+    }
+}
 
 // Server port No.
 const PORT = process.env.PORT;

@@ -9,6 +9,7 @@ const fetchUser = (req, res, next) => {
     // get the userfrom the jwt token and add to req. object
     const token = req.header('Authorization');
     // delete req.headers['x-powered-by'];
+    console.log(token);
     if (token) {
         try {
             const currentToken = token.split(" ")[1];
