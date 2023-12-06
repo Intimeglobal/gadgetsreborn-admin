@@ -11,7 +11,15 @@ app.use(express.urlencoded({ extended: false }));
 const Mailgen = require('mailgen');
 const twilio = require('twilio');
 const { uid } = require('uid');
-const stripe = require('stripe')("sk_test_51O8OqLKUlkWJEm6Xm5RFpMzVx1CUPMZfmuYs3PSGv2ogsGsGmeUlcVMbNy2CYMlnZ8UY9a4R2uSDzapP2fiH9JEY00yTdUptIK");
+
+const Stripe = require("stripe");
+const PUBLISHABLE_KEY = "pk_test_51OKGfOGNhwRNzwdystStmXmIu2B7UPAGjPjQj9Ctb18TDNEpUTHQoQUJMHLrErGJyHg89uy71MyuHpIaJZPK6x9S00O6i37wzU"
+const SECRET_KEY = "sk_test_51OKGfOGNhwRNzwdyucIQkxvRHq1xS57rh5jeMOLj43GpUy3oaLceDZIGBJrt4EkamOsTw812NKf4fY0ztlzVjVSF00aGC60YiG"
+
+const stripe = Stripe(SECRET_KEY, { apiVersion: "2023-10-16" });
+
+
+// const stripe = require('stripe')("sk_test_51O8OqLKUlkWJEm6Xm5RFpMzVx1CUPMZfmuYs3PSGv2ogsGsGmeUlcVMbNy2CYMlnZ8UY9a4R2uSDzapP2fiH9JEY00yTdUptIK");
 
 const monthlyDiagnose = "price_1OI7hYKUlkWJEm6XdPl4n2Mu";
 
@@ -331,6 +339,7 @@ app.post("/login", async (req, res) => {
     }
     res.json({ status: "error", error: "Invalid Password" });
 });
+
 
 // Forgot-password API
 app.post("/forgot-password", async (req, res) => {
@@ -1290,6 +1299,27 @@ const stripeSession = async (email) => {
         return error;
     }
 }
+
+
+// Mohit Stripe Payment Function 
+
+app.post('/create-payment-intent', async (req, res) => {
+    try {
+        const { amount } = req.body;
+
+        const paymentIntent = await stripe.paymentIntents.create({
+            amount,
+            currency: 'aed',
+        });
+
+        res.json({ clientSecret: paymentIntent.client_secret });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+
 
 // Server port No.
 const PORT = process.env.PORT;
