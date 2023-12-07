@@ -13,7 +13,10 @@ const twilio = require('twilio');
 const { uid } = require('uid');
 
 const Stripe = require("stripe");
-const PUBLISHABLE_KEY = "pk_test_51OKGfOGNhwRNzwdystStmXmIu2B7UPAGjPjQj9Ctb18TDNEpUTHQoQUJMHLrErGJyHg89uy71MyuHpIaJZPK6x9S00O6i37wzU"
+// const PUBLISHABLE_KEY = process.env.PUBLISHABLE_KEY;
+// const SECRET_KEY = process.env.SECRET_KEY;
+
+const PUBLISHABLE_KEY = "pk_test_51OKGfOGNhwRNzwdy9HbpM5bauKwi5S93JzW45rgnomufTicDrLtPF1h38gBn9j0lQkdLxZWismYIXq8d05MZEWn6004ItpBNae"
 const SECRET_KEY = "sk_test_51OKGfOGNhwRNzwdyucIQkxvRHq1xS57rh5jeMOLj43GpUy3oaLceDZIGBJrt4EkamOsTw812NKf4fY0ztlzVjVSF00aGC60YiG"
 
 const stripe = Stripe(SECRET_KEY, { apiVersion: "2023-10-16" });
@@ -40,6 +43,7 @@ const fetchUser = require("./middleware/fetchUser");
 const cors = require("cors");
 const { restart } = require("nodemon");
 const { type } = require("os");
+const { ConversationContextImpl } = require("twilio/lib/rest/conversations/v1/conversation");
 app.use(cors());
 app.use(express.json())
 // Create a storage engine for multer
@@ -332,7 +336,7 @@ app.post("/login", async (req, res) => {
         const token = jwt.sign(data, JWT_SECRET);
 
         if (res.status(201)) {
-            return res.json({ status: "ok", token: token });
+            return res.json({ status: "ok", token: token, currentOrderId: user.currentOrderId });
         } else {
             return res.json({ error: "error" });
         }
@@ -1303,16 +1307,45 @@ const stripeSession = async (email) => {
 
 // Mohit Stripe Payment Function 
 
-app.post('/create-payment-intent', async (req, res) => {
+app.get('/create-payment-intent', fetchUser, async (req, res) => {
     try {
-        const { amount } = req.body;
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0 });
+        // const { amount } = req.body;
 
-        const paymentIntent = await stripe.paymentIntents.create({
-            amount,
-            currency: 'aed',
-        });
+        if (userExist) {
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: 1999,
+                currency: 'aed',
+            });
+            console.log(userExist.email);
+            res.status(200).json({ clientSecret: paymentIntent.client_secret });
 
-        res.json({ clientSecret: paymentIntent.client_secret });
+        } else {
+            res.status(400).json({ message: "User does not exist" })
+        }
+
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+});
+
+app.post('/get-diagnose-payment', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await User.findOne({ _id: userID }, { password: 0 });
+        // const { amount } = req.body;
+
+        if (userExist) {
+
+            res.status(200).json({ clientSecret: paymentIntent.client_secret });
+
+        } else {
+            res.status(400).json({ message: "User does not exist" })
+        }
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ error: 'Internal server error' });

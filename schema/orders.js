@@ -90,7 +90,8 @@ const OrdersDetailsScehma = new mongoose.Schema(
         address: { type: Object, default: {} },
         technicianAllotted: { type: String, default: "" },
         pickupdate: { type: String, },
-        pickuptime: { type: String, }
+        pickuptime: { type: String, },
+        diagnoseDone: { type: Boolean }
     },
     {
         collection: "OrdersInfo",
