@@ -91,7 +91,10 @@ const OrdersDetailsScehma = new mongoose.Schema(
         technicianAllotted: { type: String, default: "" },
         pickupdate: { type: String, },
         pickuptime: { type: String, },
-        diagnoseDone: { type: Boolean }
+        diagnoseDone: { type: String, default: "pending" }
+        // pending-> show payment page, 
+        // inprogress-> device details, 
+        // completed-> all orders
     },
     {
         collection: "OrdersInfo",

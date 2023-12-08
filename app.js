@@ -161,7 +161,6 @@ app.post("/register", async (req, res) => {
             username,
             email,
             phone,
-            userType,
             image: base64,
             password: encryptedPassword,
         });
@@ -281,41 +280,42 @@ app.post('/otp-mobile-verification', async (req, res) => {
     }
 })
 
-app.post('/mobile-email-verification', async (req, res) => {
-    try {
-        const { email } = req.body;
+// app.post('/mobile-email-verification', async (req, res) => {
+//     try {
+//         const { email } = req.body;
 
-        // if any empty property remains
-        if (!email) {
-            return res
-                .status(404)
-                .json({ message: "Please fill the required field" });
-        }
-        // checking whether user exist
-        const userExist = await User.findOne({ email: email });
-        if (!userExist)
-            return res.status(422).json({ message: "User does not Exist" });
+//         // if any empty property remains
+//         if (!email) {
+//             return res
+//                 .status(404)
+//                 .json({ message: "Please fill the required field" });
+//         }
+//         // checking whether user exist
+//         const userExist = await User.findOne({ email: email });
+//         if (!userExist)
+//             return res.status(422).json({ message: "User does not Exist" });
 
-        await sendEmailVerification(email);
+//         await sendEmailVerification(email);
 
-        // for time out of OTP after 60 seconds
-        OTPTIMEOUT(email);
-        res.status(200).json({ message: "OTP sent Successfully", status: "ok" });
-    } catch (error) {
-        console.log(error.message);
-    }
-})
+//         // for time out of OTP after 60 seconds
+//         OTPTIMEOUT(email);
+//         res.status(200).json({ message: "OTP sent Successfully", status: "ok" });
+//     } catch (error) {
+//         console.log(error.message);
+//     }
+// })
+
 // API for checking the OTP
-app.post('/checking-otp', async (req, res) => {
-    const otp = req.body.otp;
-    const email = req.body.email;
+// app.post('/checking-otp', async (req, res) => {
+//     const otp = req.body.otp;
+//     const email = req.body.email;
 
-    if ((+otp) === map.get(email)) {
-        res.status(200).json({ message: "Email verfied successfully", verified: true });
-    } else {
-        res.status(404).json({ message: "OTP does not match", verified: false });
-    }
-})
+//     if ((+otp) === map.get(email)) {
+//         res.status(200).json({ message: "Email verfied successfully", verified: true });
+//     } else {
+//         res.status(404).json({ message: "OTP does not match", verified: false });
+//     }
+// })
 
 // Login API
 app.post("/login", async (req, res) => {
@@ -334,14 +334,12 @@ app.post("/login", async (req, res) => {
             },
         };
         const token = jwt.sign(data, JWT_SECRET);
-
-        if (res.status(201)) {
-            return res.json({ status: "ok", token: token, currentOrderId: user.currentOrderId });
-        } else {
-            return res.json({ error: "error" });
-        }
+        const response = await Orders.findOne({ orderId: user.currentOrderId })
+        console.log(response);
+        res.status(200).json({ status: "ok", token: token, currentOrderId: user.currentOrderId, diagnoseDone: response });
+    } else {
+        res.json({ status: "error", message: "Invalid Password" });
     }
-    res.json({ status: "error", error: "Invalid Password" });
 });
 
 
@@ -579,96 +577,6 @@ app.get("/paginatedUsers", async (req, res) => {
 
     res.json(results)
 })
-
-// Technician Register API
-app.post("/technicianregister", async (req, res) => {
-    const { fname, lname, username, email, phone, userType, password, base64 } = req.body;
-    const encryptedPassword = await bcrypt.hash(password, 10);
-    try {
-        const oldEmail = await Technician.findOne({ email });
-        const oldPhone = await Technician.findOne({ phone });
-        if (oldEmail) {
-            return res.json({ error: "Email Already Registered" });
-        }
-
-        if (oldPhone) {
-            return res.json({ error: "Phone Number Already Exists" });
-        }
-        await Technician.create({
-            fname,
-            lname,
-            username,
-            email,
-            phone,
-            userType,
-            image: base64,
-            password: encryptedPassword,
-        });
-        res.send({ status: "ok" });
-    } catch (error) {
-        res.send({ status: "error", error });
-    }
-});
-
-//Fetch All Technicians Data
-app.get("/getAllTechnicians", async (req, res) => {
-    try {
-        const allTechnicians = await Technician.find({});
-        res.send({ status: "ok", data: allTechnicians });
-    } catch (error) {
-        console.log(error);
-    }
-});
-
-// API For Paginated Technicians
-app.get("/paginatedTechnicians", async (req, res) => {
-    const allUser = await Technician.find({});
-    const page = parseInt(req.query.page)
-    const limit = parseInt(req.query.limit)
-
-    const startIndex = (page - 1) * limit
-    const lastIndex = (page) * limit
-
-    const results = {}
-    results.totalUser = allUser.length;
-    results.pageCount = Math.ceil(allUser.length / limit);
-
-    if (lastIndex < allUser.length) {
-        results.next = {
-            page: page + 1,
-        }
-    }
-    if (startIndex > 0) {
-        results.prev = {
-            page: page - 1,
-        }
-    }
-
-    results.result = allUser.slice(startIndex, lastIndex);
-
-    res.json(results)
-})
-
-// Update Technicians Data API
-app.post("/updateTechnicians", async (req, res) => {
-    try {
-        const { _id, fname, base64 } = req.body;
-        // Use Mongoose to update the user by _id
-        const updatedUser = await Technician.findByIdAndUpdate(_id, { fname, image: base64, }, { new: true });
-
-        if (!updatedUser) {
-            // If user not found, return an error
-            return res.status(404).json({ error: "User not found" });
-        }
-
-        // User updated successfully, send the updated user as a response
-        res.status(200).json({ message: "User updated successfully", user: updatedUser });
-    } catch (error) {
-        // Handle any errors and send an error response
-        console.error(error);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
 
 // Modal Added API
 app.post("/modal-added", async (req, res) => {
@@ -1336,11 +1244,30 @@ app.post('/get-diagnose-payment', fetchUser, async (req, res) => {
     try {
         const userID = req.user.id;
         const userExist = await User.findOne({ _id: userID }, { password: 0 });
-        // const { amount } = req.body;
+        const paymentInfo = req.body.paymentInfo;
 
-        if (userExist) {
+        console.log(paymentInfo)
+        const currentObj = {
+            transactionId: paymentInfo.id,
+            amount: paymentInfo.amount,
+            paymentDate: paymentInfo.created,
+            cardName: paymentInfo.paymentMethod.Card.brand,
+            cardNumber: paymentInfo.paymentMethod.Card.last4
+        }
 
-            res.status(200).json({ clientSecret: paymentIntent.client_secret });
+        const response = await Orders.findOneAndUpdate({ orderId: userExist.currentOrderId }, {
+            '$push': {
+                paymentDetails: currentObj
+            },
+            '$set': {
+                diagnoseDone: "inprogress",
+                orderstatus: "inprogress"
+            }
+        })
+
+        if (response) {
+
+            res.status(200).json({ message: "Payment Successful", status: "ok" });
 
         } else {
             res.status(400).json({ message: "User does not exist" })
@@ -1351,6 +1278,218 @@ app.post('/get-diagnose-payment', fetchUser, async (req, res) => {
         res.status(500).json({ error: 'Internal server error' });
     }
 });
+
+
+
+
+
+
+
+///////////////////// Technicians App ///////////////////////////
+
+// Technician Register API
+
+app.post("/technician-register", async (req, res) => {
+    const { fname, username, email, phone, userType, password, base64 } = req.body;
+    const encryptedPassword = await bcrypt.hash(password, 10);
+    try {
+        // image.create({ image: base64 }
+        const user = await Technician.create({
+            fname,
+            username,
+            email,
+            phone,
+            image: base64,
+            password: encryptedPassword,
+        });
+
+        if (user) {
+            res.status(200).json({ message: "user created", status: "ok" });
+        } else {
+            res.status(200).json({ message: "problem in creating the user", status: "ok" });
+        }
+
+    } catch (error) {
+        res.send({ message: "error", error });
+    }
+});
+
+app.post('/technician-email-verification', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // if any empty property remains
+        if (!email) {
+            return res
+                .status(404)
+                .json({ message: "Please fill the required field" });
+        }
+        // checking whether user exist
+        const userExist = await Technician.findOne({ email: email });
+        if (userExist) {
+            console.log("Technician Exist");
+            return res.status(422).json({ message: "Technician Already Exist" });
+        }
+        await sendEmailVerification(email);
+
+        // for time out of OTP after 60 seconds
+        OTPTIMEOUT(email);
+        res.status(200).json({ message: "OTP sent Successfully", status: "ok" });
+    } catch (error) {
+        console.log(error.message);
+    }
+})
+
+// for OTP verification
+app.post('/technician-otp-verification', async (req, res) => {
+    const { otp, email } = req.body;
+    try {
+        console.log(otp, email);
+
+        // Check if the email already exists
+        const existingUser = await Technician.findOne({ email });
+        if (existingUser) {
+            return res.status(400).json({ message: "Technician already exists" });
+        }
+
+        // Check if the OTP is valid
+        const storedOTP = map.get(email);
+        if (storedOTP && (+otp) === storedOTP) {
+            console.log("Verification done");
+            res.status(200).json({ message: "Verification done", status: "ok" });
+        } else {
+            res.status(400).json({ message: "Wrong OTP" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// sending otp using smsglobal
+app.post('/technician-mobile-otp', async (req, res) => {
+    try {
+        console.log("reached");
+        const phonenumber = "+" + req.body.phone;
+
+        const oldPhone = await Technician.findOne({ phone: req.body.phone });
+
+        if (oldPhone) {
+            return res.status(400).json({ message: "phone number already exist" });
+        }
+
+        const response = await client.verify.v2.services(servicesid)
+            .verifications
+            .create({ to: phonenumber, channel: 'sms' });
+        console.log(response);
+        if (response) {
+            res.status(200).json({ message: "OTP sent successfully", status: "ok" })
+        } else {
+            res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+        }
+
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+    }
+});
+
+// technician-Login API
+app.post("/technician-login", async (req, res) => {
+    const { email, password } = req.body;
+
+    const user = await Technician.findOne({ email });
+
+    if (!user) {
+        return res.send({ error: "Technician Not Found" });
+    }
+    if (await bcrypt.compare(password, user.password)) {
+
+        const data = {
+            user: {
+                id: user._id,
+            },
+        };
+        const token = jwt.sign(data, JWT_SECRET);
+        // const response = await Orders.findOne({ orderId: user.currentOrderId })
+        // console.log(response);
+        res.status(200).json({ status: "ok", token: token });
+    } else {
+        res.json({ status: "error", message: "Invalid Password" });
+    }
+});
+
+//Fetch All Technicians Data
+app.get("/getAllTechnicians", async (req, res) => {
+    try {
+        const allTechnicians = await Technician.find({});
+        res.send({ status: "ok", data: allTechnicians });
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+// API For Paginated Technicians
+app.get("/paginatedTechnicians", async (req, res) => {
+    const allUser = await Technician.find({});
+    const page = parseInt(req.query.page)
+    const limit = parseInt(req.query.limit)
+
+    const startIndex = (page - 1) * limit
+    const lastIndex = (page) * limit
+
+    const results = {}
+    results.totalUser = allUser.length;
+    results.pageCount = Math.ceil(allUser.length / limit);
+
+    if (lastIndex < allUser.length) {
+        results.next = {
+            page: page + 1,
+        }
+    }
+    if (startIndex > 0) {
+        results.prev = {
+            page: page - 1,
+        }
+    }
+
+    results.result = allUser.slice(startIndex, lastIndex);
+
+    res.json(results)
+})
+
+// Update Technicians Data API
+app.post("/updateTechnicians", async (req, res) => {
+    try {
+        const { _id, fname, base64 } = req.body;
+        // Use Mongoose to update the user by _id
+        const updatedUser = await Technician.findByIdAndUpdate(_id, { fname, image: base64, }, { new: true });
+
+        if (!updatedUser) {
+            // If user not found, return an error
+            return res.status(404).json({ error: "User not found" });
+        }
+
+        // User updated successfully, send the updated user as a response
+        res.status(200).json({ message: "User updated successfully", user: updatedUser });
+    } catch (error) {
+        // Handle any errors and send an error response
+        console.error(error);
+        res.status(500).json({ error: "Internal server error" });
+    }
+});
+
+
+
+
+
+
+
+///////////////////// Admin Dashboard ////////////////////////
+
+
+
 
 
 

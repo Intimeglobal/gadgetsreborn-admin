@@ -2,8 +2,9 @@ const mongoose = require("mongoose");
 
 const TechnicianDetailsScehma = new mongoose.Schema(
     {
-        fname: { type: String, required: true },
-        username: { type: String, default: "", required: true },
+        technicianId: { type: String, default: getRandomIntInclusive() },
+        fname: { type: String, default: "" },
+        username: { type: String, default: "", },
         email: { type: String, unique: true },
         phone: { type: String, unique: true },
         userType: { type: String, default: 'Technician' },
@@ -40,8 +41,8 @@ const TechnicianDetailsScehma = new mongoose.Schema(
             eid: { type: String, default: "" },
             tradelicense: { type: String, default: "" },
             photo: { type: String, default: "" }
-
         },
+        isverified: { type: Boolean, default: false },
         availability: { type: Boolean, default: true },
         technicianrole: { type: String, default: "" },
         balance: { type: Number, default: 0 },
@@ -53,5 +54,11 @@ const TechnicianDetailsScehma = new mongoose.Schema(
         collection: "TechnicianInfo",
     }
 );
+
+function getRandomIntInclusive() {
+    min = Math.ceil(100000);
+    max = Math.floor(999999);
+    return Math.floor(Math.random() * (max - min + 1) + min); // The maximum is inclusive and the minimum is inclusive
+}
 
 mongoose.model("TechnicianInfo", TechnicianDetailsScehma);
