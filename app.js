@@ -203,6 +203,31 @@ app.post('/email-verification', async (req, res) => {
     }
 })
 
+app.post('/forgotpassword-email-verification', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        // if any empty property remains
+        if (!email) {
+            return res
+                .status(404)
+                .json({ message: "Please fill the required field" });
+        }
+        // checking whether user exist
+        const userExist = await User.findOne({ email: email });
+        if (userExist) {
+            await sendEmailVerification(email);
+            res.status(200).json({ message: "OTP sent Successfully", status: "ok" });
+            OTPTIMEOUT(email);
+        } else {
+            res.status(422).json({ message: "User does not Exist" });
+        }
+        // for time out of OTP after 60 seconds
+    } catch (error) {
+        console.log(error.message);
+    }
+})
+
 // for OTP verification
 app.post('/otp-verification', async (req, res) => {
     const { otp, email } = req.body;
@@ -228,6 +253,64 @@ app.post('/otp-verification', async (req, res) => {
         res.status(500).json({ message: "Internal Server Error" });
     }
 });
+
+// for forgotpassowrd verification
+app.post('/forgotpassword-otp-verification', async (req, res) => {
+    const { otp, email } = req.body;
+    try {
+        console.log(otp, email);
+
+        // Check if the email already exists
+        const existingUser = await User.findOne({ email });
+        if (existingUser) {
+            const storedOTP = map.get(email);
+            if (storedOTP && (+otp) === storedOTP) {
+                console.log("Verification done");
+                res.status(200).json({ message: "Verification done", status: "ok" });
+            } else {
+                res.status(400).json({ message: "Wrong OTP" });
+            }
+        } else {
+            res.status(400).json({ message: "User does not exists" });
+        }
+
+        // Check if the OTP is valid
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+app.post('/change-password', async (req, res) => {
+    try {
+        const { email, password } = req.body;
+        if (!password || !email) {
+            return res.status(400).json({ message: "please fill the required field" });
+        }
+        const currentUser = await User.findOne({ email: email });
+        if (currentUser) {
+            // generate salt to hash password
+            const salt = await bcrypt.genSalt(10);
+            // now we set user password to hashed password
+            const newPassword = await bcrypt.hash(password, salt);
+            const updatePassword = await User.findByIdAndUpdate(currentUser.id, {
+                $set: {
+                    'password': newPassword
+                }
+            });
+            if (updatePassword) {
+                res.status(200).json({ message: "Password Updated successfully", status: "ok" })
+            } else {
+                res.status(200).json({ message: "Something went wrong" })
+            }
+        } else {
+            res.status(404).json({ message: "No user Found" });
+        }
+    } catch (error) {
+        console.log(error)
+    }
+})
 
 // sending otp using smsglobal
 app.post('/mobile-otp', async (req, res) => {
