@@ -1,4 +1,5 @@
 const express = require("express");
+const formidable = require('formidable');
 const app = express();
 const mongoose = require("mongoose");
 app.use(express.json());
@@ -45,12 +46,12 @@ const { restart } = require("nodemon");
 const { type } = require("os");
 const { ConversationContextImpl } = require("twilio/lib/rest/conversations/v1/conversation");
 app.use(cors());
-app.use(express.json())
-// Create a storage engine for multer
-const storage = multer.memoryStorage();
+// app.use(express.json())
+// // Create a storage engine for multer
+// const storage = multer.memoryStorage();
 
-// Initialize multer with the storage engine
-const upload = multer({ storage: multer.memoryStorage() });
+// // Initialize multer with the storage engine
+// const upload = multer({ storage: multer.memoryStorage() });
 
 // Database connection
 const mongoUrl = process.env.URL;
@@ -83,6 +84,31 @@ const accountSid = "AC76ab0a9ce0f377a72c7c1ca6dc8c432a";
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 const servicesid = 'VA3072be8c6102f371a7fcd7ffdc7a2b46'
+const aws = require('aws-sdk');
+const fs = require('fs');
+
+let fileName;
+
+const storage = multer.diskStorage({
+    destination: (req, file, cb) => {
+        cb(null, './uploads/'); // Adjust the destination folder
+    },
+    filename: (req, file, cb) => {
+        fileName = Date.now() + '-' + file.originalname;
+        cb(null, fileName); // Adjust the filename
+    },
+});
+
+const upload = multer({ storage: storage });
+
+
+// Configure AWS credentials
+aws.config.update({
+    accessKeyId: 'AKIAXRWWSULT4IGLATER',
+    secretAccessKey: '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',
+    region: 'us-east-1',
+});
+
 
 // function for send email verification 
 const sendEmailVerification = async (recipientEmail) => {
@@ -581,32 +607,32 @@ app.get("/getAllUser", async (req, res) => {
 });
 
 // Update User Data API
-app.post('/updateUser', upload.single('image'), async (req, res) => {
-    try {
-        const { _id, fname, address, role, instagram, facebook } = req.body;
-        let base64 = null;
+// app.post('/updateUser', upload('image'), async (req, res) => {
+//     try {
+//         const { _id, fname, address, role, instagram, facebook } = req.body;
+//         let base64 = null;
 
-        if (req.file) {
-            // Convert the image to base64
-            base64 = req.file.buffer.toString('base64');
-        }
+//         if (req.file) {
+//             // Convert the image to base64
+//             base64 = req.file.buffer.toString('base64');
+//         }
 
-        // Use Mongoose to update the user by _id
-        const updatedUser = await User.findByIdAndUpdate(_id, { fname, address, role, instagram, facebook, image: base64 }, { new: true });
+//         // Use Mongoose to update the user by _id
+//         const updatedUser = await User.findByIdAndUpdate(_id, { fname, address, role, instagram, facebook, image: base64 }, { new: true });
 
-        if (!updatedUser) {
-            // If user not found, return a 404 error
-            return res.status(404).json({ error: 'User not found' });
-        }
+//         if (!updatedUser) {
+//             // If user not found, return a 404 error
+//             return res.status(404).json({ error: 'User not found' });
+//         }
 
-        // User updated successfully, send the updated user as a response
-        res.status(200).json({ message: 'User updated successfully', user: updatedUser });
-    } catch (error) {
-        // Handle any errors and send an error response
-        console.error(error);
-        res.status(500).json({ error: 'Internal server error' });
-    }
-});
+//         // User updated successfully, send the updated user as a response
+//         res.status(200).json({ message: 'User updated successfully', user: updatedUser });
+//     } catch (error) {
+//         // Handle any errors and send an error response
+//         console.error(error);
+//         res.status(500).json({ error: 'Internal server error' });
+//     }
+// });
 
 // Fetch Loggedin user by Data
 app.post("/getloginuserdata", async (req, res) => {
@@ -1563,13 +1589,77 @@ app.post("/updateTechnicians", async (req, res) => {
     }
 });
 
+app.post('/uploads', upload.single('file'), (req, res) => {
+    console.log(req.body);
+    console.log(req.file, fileName);
+    res.json({ message: "hello from the backend" });
+})
 
+app.post('/upload-documents', upload.array('file', 5), async (req, res) => {
+    // Check if documents existd
+    // if (!documents || documents.length === 0) {
+    //     return res.status(400).json({ error: 'No documents uploaded' });
+    // }
+
+    // Upload files to S3
+    let s3 = new aws.S3();
+    for (let i = 0; i < req.files.length; i++) {
+        const { path, filename } = req.files[i];
+        // call S3 to retrieve upload file to specified bucket
+        let uploadParams = { Bucket: 'gadgetsrebon', Key: '', Body: '' };
+        let fileName = uid() + filename;
+
+        // Configure the file stream and obtain the upload parameters
+        let fileStream = fs.createReadStream(path);
+        fileStream.on('error', function (err) {
+            console.log('File Error', err);
+        });
+        uploadParams.Body = fileStream;
+        uploadParams.Key = fileName
+
+        // call S3 to retrieve upload file to specified bucket
+        s3.upload(uploadParams, async function (err, data) {
+            if (err) {
+                console.log("Error", err);
+            } if (data) {
+                console.log(data);
+            }
+        });
+    }
+    res.send("uploaded successfully")
+
+    // let s3 = new aws.S3();
+    // const { originalname, path, filename } = req.file;
+    // // call S3 to retrieve upload file to specified bucket
+    // let uploadParams = { Bucket: 'gadgetsrebon', Key: '', Body: '' };
+    // let fileName = uid();
+
+    // // Configure the file stream and obtain the upload parameters
+    // let fileStream = fs.createReadStream(path);
+    // fileStream.on('error', function (err) {
+    //     console.log('File Error', err);
+    // });
+    // uploadParams.Body = fileStream;
+    // uploadParams.Key = filename
+
+    // // call S3 to retrieve upload file to specified bucket
+    // s3.upload(uploadParams, async function (err, data) {
+    //     if (err) {
+    //         console.log("Error", err);
+    //     } if (data) {
+    //         res.send("uploaded successfully")
+    //     }
+    // });
+
+
+});
 
 
 
 
 
 ///////////////////// Admin Dashboard ////////////////////////
+
 
 
 
