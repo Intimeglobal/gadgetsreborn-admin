@@ -14,7 +14,7 @@ import Modal from './Pages/product-management/modal';
 import Warranty from './Pages/warranty/user-warranty';
 import AddWarranty from './Pages/warranty/add-warranty';
 import Notification from './Pages/notification/notification';
-import Order from './Pages/frontend/orders-pages/orderpage1';
+import Order from './Pages/recent-orders';
 
 function App() {
   const isLoggedIn = window.localStorage.getItem("loggedIn");

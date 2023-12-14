@@ -184,7 +184,7 @@ export default function Users() {
                                                             <th width="17%">Name</th>
                                                             <th width="13%">Phone</th>
                                                             <th width="22%">Email</th>
-                                                            <th width="15%">Created on</th>
+                                                            <th width="15%">Current Orders</th>
                                                             <th width="10%">Status</th>
                                                             <th width="10%">Action</th>
                                                         </tr>
@@ -194,11 +194,11 @@ export default function Users() {
                                                             return (
                                                                 <tr key={i._id}>
                                                                     <td>{i.userId}</td>
-                                                                    {/* <td><img alt="" src={`data:image/png;base64,${i.image}`} width="25" height="25" /></td> */}
                                                                     <td>{i.fname}</td>
                                                                     <td>{i.phone}</td>
                                                                     <td>{i.email}</td>
-                                                                    <td>{i.createdAt.Date}{formatDate(i.createdAt)}</td>
+                                                                    {/* <td>{i.createdAt.Date}{formatDate(i.createdAt)}</td> */}
+                                                                    <td>{i.currentOrderId}</td>
                                                                     <td>Active</td>
                                                                     <td>
                                                                         <div className="row">

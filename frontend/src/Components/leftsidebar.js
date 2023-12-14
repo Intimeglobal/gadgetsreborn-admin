@@ -54,7 +54,7 @@ function leftsidebar() {
                     <div id="collapseOrders" className="collapse" aria-labelledby="headingUtilities"
                         data-parent="#accordionSidebar">
                         <div className="bg-orange py-2 collapse-inner rounded">
-                            <Link className="collapse-item font-weight-bold" to="recent-orders.html">Recent Orders</Link>
+                            <Link className="collapse-item font-weight-bold" to="/order">Recent Orders</Link>
                             <Link className="collapse-item font-weight-bold" to="technician-allocated.html">Technician
                                 Allocated</Link>
                             <Link className="collapse-item font-weight-bold" to="complete-orders.html">Complete Orders</Link>

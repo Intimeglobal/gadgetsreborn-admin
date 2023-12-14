@@ -72,6 +72,7 @@ require("./schema/modal");
 require("./schema/orders");
 require("./schema/warranty");
 require("./schema/notification");
+require("./schema/admin");
 
 const User = mongoose.model("UserInfo");
 const Technician = mongoose.model("TechnicianInfo");
@@ -80,6 +81,7 @@ const Models = mongoose.model("ModelInfo");
 const Orders = mongoose.model("OrdersInfo");
 const Warranty = mongoose.model("WarrantyInfo");
 const Notification = mongoose.model("NotificationInfo");
+const Admin = mongoose.model("admin");
 const accountSid = "AC76ab0a9ce0f377a72c7c1ca6dc8c432a";
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
@@ -572,6 +574,7 @@ app.post("/reset-password/:id/:token", async (req, res) => {
 //users API
 app.post("/users", async (req, res) => {
     const { token } = req.body;
+    // console.log(token);
     try {
         const user = jwt.verify(token, JWT_SECRET, (err, res) => {
             if (err) {
@@ -579,12 +582,12 @@ app.post("/users", async (req, res) => {
             }
             return res;
         });
-        console.log(user);
+        // console.log(user);
         if (user == "token expired") {
             return res.send({ status: "error", data: "token expired" });
         }
         const useremail = user.email;
-        User.findOne({ email: useremail })
+        Admin.findOne({ email: useremail })
             .then((data) => {
                 res.send({ status: "ok", data: data })
             })
@@ -1627,41 +1630,79 @@ app.post('/upload-documents', upload.array('file', 5), async (req, res) => {
         });
     }
     res.send("uploaded successfully")
-
-    // let s3 = new aws.S3();
-    // const { originalname, path, filename } = req.file;
-    // // call S3 to retrieve upload file to specified bucket
-    // let uploadParams = { Bucket: 'gadgetsrebon', Key: '', Body: '' };
-    // let fileName = uid();
-
-    // // Configure the file stream and obtain the upload parameters
-    // let fileStream = fs.createReadStream(path);
-    // fileStream.on('error', function (err) {
-    //     console.log('File Error', err);
-    // });
-    // uploadParams.Body = fileStream;
-    // uploadParams.Key = filename
-
-    // // call S3 to retrieve upload file to specified bucket
-    // s3.upload(uploadParams, async function (err, data) {
-    //     if (err) {
-    //         console.log("Error", err);
-    //     } if (data) {
-    //         res.send("uploaded successfully")
-    //     }
-    // });
-
-
 });
 
+app.post("/login-admin", async (req, res) => {
 
+    try {
+        const { email, password } = req.body;
+
+        const user = await Admin.findOne({ email });
+
+        if (!user) {
+            return res.send({ error: "Admin Not Found" });
+        }
+        if (await bcrypt.compare(password, user.password)) {
+
+            const data = {
+                user: {
+                    id: user._id,
+                },
+            };
+            const token = jwt.sign(data, JWT_SECRET);
+
+            res.status(200).json({ status: "ok", token: token, message: "Login Successfully" });
+        } else {
+            res.json({ status: "error", message: "Invalid Password" });
+        }
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+// app.post("/register-admin", async (req, res) => {
+//     const { email, password } = req.body;
+//     const encryptedPassword = await bcrypt.hash(password, 10);
+//     try {
+
+
+//         // image.create({ image: base64 }
+//         const user = await Admin.create({
+//             email,
+//             password: encryptedPassword,
+//         });
+
+//         if (user) {
+//             res.status(200).json({ message: "Admin created", status: "ok" });
+//         } else {
+//             res.status(200).json({ message: "problem in creating the user", status: "ok" });
+//         }
+//     } catch (error) {
+//         res.send({ message: "error", error });
+//     }
+// });
 
 
 
 ///////////////////// Admin Dashboard ////////////////////////
 
 
+app.get("/fetch-all-orders", fetchUser, async (req, res) => {
 
+    try {
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+
+        if (adminExist) {
+            const orders = await Orders.find({});
+            res.status(200).json({ status: "ok", data: orders });
+        } else {
+            res.status(200).json({ status: "ok", message: "wrong credentials" });
+        }
+    } catch (error) {
+        res.send({ message: "error", error });
+    }
+});
 
 
 

@@ -33,7 +33,7 @@ export default class Login extends Component {
         e.preventDefault();
         const { email, password } = this.state;
         console.log(email, password);
-        fetch("http://localhost:5000/login", {
+        fetch("http://localhost:5000/login-admin", {
             method: "POST",
             crossDomain: true,
             headers: {
@@ -47,11 +47,10 @@ export default class Login extends Component {
             }),
         }).then((res) => res.json())
             .then((data) => {
-                console.log(data, "userRegister");
                 if (data.status === "ok") {
-                    this.showAlert("Login Successful", "success");
+                    this.showAlert(data.message, "success");
                     // alert("Login Successful");
-                    window.localStorage.setItem("token", data.data);
+                    window.localStorage.setItem("token", data.token);
                     window.localStorage.setItem("loggedIn", true);
                     window.location.href = "./dashboard"
                 }
@@ -94,24 +93,15 @@ export default class Login extends Component {
                                         <div className="text-left">
                                             <label htmlFor="gadgetrebornpassword" className="form-label text-secondary">Password</label>
                                         </div>
-                                        <div className="text-right">
-                                            <small>
-                                                <a href="forgot-password" className="text-right">Forgot Password?</a>
-                                            </small>
-                                        </div>
                                     </div>
                                     <input type="password" className="form-control" id="gadgetrebornpassword"
                                         placeholder="Enter your password"
                                         onChange={(e) => this.setState({ password: e.target.value })} required />
                                 </div>
-                                <div className="mb-3 form-check">
-                                    <input type="checkbox" className="form-check-input" id="gadgetCheck1" />
-                                    <label className="form-check-label text-secondary" htmlFor="gadgetCheck1">Remember Me</label>
-                                </div>
+
                                 <button type="submit" className="btn btn-primary w-100 d-block">Sign In</button>
                             </form>
-                            <p className="text-center text-secondary pt-4">New on our platform? <a href="/register">Create an
-                                account</a></p>
+
                         </div>
                     </div>
                 </div>

@@ -29,9 +29,6 @@ const Dashboard = () => {
         }).then((res) => res.json())
             .then((data) => {
                 // console.log(data, "userData");
-                if (data.data.userType === "Admin") {
-                    setAdmin(true);
-                }
 
                 setUserData(data.data);
                 if (data.data === 'token expired') {
@@ -63,7 +60,7 @@ const Dashboard = () => {
     }, []);
 
 
-    return admin ?
+    return (
         <div>
             <div id="wrapper">
 
@@ -330,7 +327,7 @@ const Dashboard = () => {
             </div>
 
         </div>
-        : <UsersProfile />
+    )
 }
 
 export default Dashboard
