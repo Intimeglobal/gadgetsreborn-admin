@@ -166,6 +166,7 @@ export default function Technicians() {
                                                         <th width="17%">Name</th>
                                                         <th width="13%">Phone</th>
                                                         <th width="22%">Email</th>
+                                                        <th width="22%">Docs</th>
                                                         <th width="15%">Created on</th>
                                                         <th width="10%">Status</th>
                                                         <th width="10%">Action</th>
@@ -175,10 +176,11 @@ export default function Technicians() {
                                                     {data.map(i => {
                                                         return (
                                                             <tr key={i._id}>
-                                                                <td>{trimUserId(i._id)}</td>
+                                                                <td>{i.technicianId}</td>
                                                                 <td>{i.fname}</td>
                                                                 <td>{i.phone}</td>
                                                                 <td>{i.email}</td>
+                                                                <td>{JSON.stringify(i.verificationDoc)}</td>
                                                                 <td>{i.createdAt.Date}{formatDate(i.createdAt)}</td>
                                                                 <td>Active</td>
                                                                 <td>

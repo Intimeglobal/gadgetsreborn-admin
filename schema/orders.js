@@ -82,9 +82,13 @@ const OrdersDetailsScehma = new mongoose.Schema(
                 amount: { type: Number, default: 0 },
                 paymentDate: { type: Date },
                 cardName: { type: String, default: "" },
-                cardNumber: { type: String, default: 0 }
+                cardNumber: { type: String, default: 0 },
+                purpose: { type: String } //repair, warranty, diagnose
             }
         ],
+        problemAfterDiagnose: {
+            type: Object, default: {}
+        },
         work: { type: Array, 'default': [] },
         pickupdrop: { type: String, default: "" },
         address: { type: Object, default: {} },

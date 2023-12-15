@@ -32,15 +32,15 @@ const TechnicianDetailsScehma = new mongoose.Schema(
                 jobstart: { type: Date, default: "" },
                 jobend: { type: Date, default: "" },
                 payment: { type: Number, required: true },
-                work: { type: Array, required: true },
+                work: { type: Object, required: true },
                 address: { type: String, default: "" },
             }
         ],
         verificationDoc: {
-            passport: { type: String, default: "" },
-            eid: { type: String, default: "" },
-            tradelicense: { type: String, default: "" },
-            photo: { type: String, default: "" }
+            Passport: { type: String, default: "" },
+            EmiratesID: { type: String, default: "" },
+            TradeLicense: { type: String, default: "" },
+            Photograph: { type: String, default: "" }
         },
         isverified: { type: Boolean, default: false },
         availability: { type: Boolean, default: true },

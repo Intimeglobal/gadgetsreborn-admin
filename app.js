@@ -1598,38 +1598,67 @@ app.post('/uploads', upload.single('file'), (req, res) => {
     res.json({ message: "hello from the backend" });
 })
 
-app.post('/upload-documents', upload.array('file', 5), async (req, res) => {
-    // Check if documents existd
-    // if (!documents || documents.length === 0) {
-    //     return res.status(400).json({ error: 'No documents uploaded' });
-    // }
+app.post('/upload-documents', fetchUser, upload.array('file', 5), async (req, res) => {
+    try {
+        const technicianId = req.user.id;
+        const technicianExist = await Technician.findOne({ _id: technicianId }, { password: 0 });
 
-    // Upload files to S3
-    let s3 = new aws.S3();
-    for (let i = 0; i < req.files.length; i++) {
-        const { path, filename } = req.files[i];
-        // call S3 to retrieve upload file to specified bucket
-        let uploadParams = { Bucket: 'gadgetsrebon', Key: '', Body: '' };
-        let fileName = uid() + filename;
+        if (technicianExist) {
+            let s3 = new aws.S3();
+            let uploadPromises = req.files.map((file) => {
+                return new Promise((resolve, reject) => {
+                    const { path, filename, originalname } = file;
+                    const documentType = originalname.split("-")[0];
+                    let uploadParams = { Bucket: 'gadgetsrebon', Key: '', Body: '', ACL: 'public-read' };
+                    let fileName = uid() + filename;
 
-        // Configure the file stream and obtain the upload parameters
-        let fileStream = fs.createReadStream(path);
-        fileStream.on('error', function (err) {
-            console.log('File Error', err);
-        });
-        uploadParams.Body = fileStream;
-        uploadParams.Key = fileName
+                    let fileStream = fs.createReadStream(path);
+                    fileStream.on('error', function (err) {
+                        console.log('File Error', err);
+                        reject(err);
+                    });
 
-        // call S3 to retrieve upload file to specified bucket
-        s3.upload(uploadParams, async function (err, data) {
-            if (err) {
-                console.log("Error", err);
-            } if (data) {
-                console.log(data);
+                    uploadParams.Body = fileStream;
+                    uploadParams.Key = fileName;
+
+                    s3.upload(uploadParams, function (err, data) {
+                        if (err) {
+                            console.log("Error", err);
+                            reject(err);
+                        } else {
+                            fs.unlink(path, (unlinkErr) => {
+                                if (unlinkErr) {
+                                    console.error('Error deleting file:', unlinkErr);
+                                    reject(unlinkErr);
+                                }
+                                resolve({ [documentType]: data.Location });
+                            });
+                        }
+                    });
+                });
+            });
+
+            let uploadedFilesLocations = await Promise.all(uploadPromises);
+
+            // Combine all file locations into one object
+            let technicianFiles = Object.assign({}, ...uploadedFilesLocations);
+
+            const updatedUser = await Technician.findByIdAndUpdate(technicianId, {
+                '$set': { 'verificationDoc': technicianFiles }
+            }, { new: true });
+
+            if (updatedUser) {
+                res.send("uploaded successfully");
+            } else {
+                res.send("something went wrong");
             }
-        });
+        } else {
+            res.status(404).send("Technician not found");
+        }
+    } catch (error) {
+        res.status(500).send(error.message || "An error occurred");
     }
-    res.send("uploaded successfully")
+
 });
 
 app.post("/login-admin", async (req, res) => {
