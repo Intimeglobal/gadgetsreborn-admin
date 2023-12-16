@@ -27,19 +27,19 @@ const TechnicianDetailsScehma = new mongoose.Schema(
         },
         jobs: [
             {
-                jobid: { type: String, required: true },
+                jobid: { type: String, default: getRandomJobIDInclusive() },
                 allotedAt: { type: Date, default: Date.now },
                 jobstart: { type: Date, default: "" },
                 jobend: { type: Date, default: "" },
                 payment: { type: Number, required: true },
-                work: { type: Object, required: true },
+                work: { type: Object, default: {} },
                 address: { type: String, default: "" },
             }
         ],
         verificationDoc: {
             Passport: { type: String, default: "" },
             EmiratesID: { type: String, default: "" },
-            TradeLicense: { type: String, default: "" },
+            TradeLicence: { type: String, default: "" },
             Photograph: { type: String, default: "" }
         },
         isverified: { type: Boolean, default: false },
@@ -60,5 +60,13 @@ function getRandomIntInclusive() {
     max = Math.floor(999999);
     return Math.floor(Math.random() * (max - min + 1) + min); // The maximum is inclusive and the minimum is inclusive
 }
+
+function getRandomJobIDInclusive() {
+    min = Math.ceil(10000);
+    max = Math.floor(99999);
+    return Math.floor(Math.random() * (max - min + 1) + min); // The maximum is inclusive and the minimum is inclusive
+}
+
+getRandomJobIDInclusive
 
 mongoose.model("TechnicianInfo", TechnicianDetailsScehma);

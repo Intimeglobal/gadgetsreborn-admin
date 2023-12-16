@@ -7,6 +7,7 @@ import Footer from '../Components/footer';
 import Modal from 'react-bootstrap/Modal';
 import Button from 'react-bootstrap/Button';
 import ReactPaginate from 'react-paginate';
+import axios from "axios";
 
 export default function Technicians() {
 
@@ -28,6 +29,12 @@ export default function Technicians() {
     const getAllTechnicians = () => {
         fetch("http://localhost:5000/getAllTechnicians", {
             method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Authorization": "bearer " + window.localStorage.getItem("token"),
+            }
         })
             .then((res) => res.json())
             .then((data) => {
@@ -128,6 +135,39 @@ export default function Technicians() {
             });
     };
 
+    // const donwloadPdf = async (file) => {
+    //     axios.get(file)
+    //         .then(response => {
+    //             // Access the file content from the response data
+    //             console.log(response);
+    //             alert("file downloaded successfully");
+    //         })
+    //         .catch(error => {
+    //             console.error('Error retrieving file content:', error.message);
+    //         });
+    // }
+
+    const handleVerify = async (id) => {
+        console.log(id, window.localStorage.getItem("token"))
+        await axios.get(`http://localhost:5000/technicianVerify/${id}`, {
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Authorization": "bearer " + window.localStorage.getItem("token"),
+            }
+        })
+            .then(response => {
+                // Access the file content from the response data
+                console.log(response);
+                alert(response.data.message);
+
+            })
+            .catch(error => {
+                console.error('Error retrieving file content:', error.message);
+            });
+        getAllTechnicians();
+    }
 
     return (
         <div>
@@ -180,9 +220,35 @@ export default function Technicians() {
                                                                 <td>{i.fname}</td>
                                                                 <td>{i.phone}</td>
                                                                 <td>{i.email}</td>
-                                                                <td>{JSON.stringify(i.verificationDoc)}</td>
-                                                                <td>{i.createdAt.Date}{formatDate(i.createdAt)}</td>
+                                                                <td>
+                                                                    <table>
+                                                                        <tr>
+                                                                            <td>
+                                                                                {(i.verificationDoc.Passport) ? <a href={i.verificationDoc.Passport} target="_blank">
+                                                                                    <i class="fas fa-file-pdf text-primary" />
+                                                                                </a> : ""}
+                                                                            </td>
+                                                                            <td>
+                                                                                {(i.verificationDoc.EmiratesID) ? <a href={i.verificationDoc.EmiratesID} target="_blank">
+                                                                                    <i class="fas fa-file-pdf text-primary" />
+                                                                                </a> : ""}
+                                                                            </td>
+                                                                            <td>
+                                                                                {(i.verificationDoc.TradeLicence) ? <a href={i.verificationDoc.TradeLicence} target="_blank">
+                                                                                    <i class="fas fa-file-pdf text-primary" />
+                                                                                </a> : ""}
+                                                                            </td>
+                                                                        </tr>
+                                                                    </table>
+
+                                                                    {/* {JSON.stringify(i.verificationDoc)}*/}
+                                                                </td>
                                                                 <td>Active</td>
+                                                                <td>{i.isverified ?
+                                                                    <div className="bg-success">Verified</div>
+                                                                    : <div className="btn btn-warning" onClick={() => handleVerify(i._id)}>Verify</div>
+                                                                }
+                                                                </td>
                                                                 <td>
                                                                     <div className="row">
                                                                         <div className="col-3">

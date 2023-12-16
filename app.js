@@ -1533,14 +1533,82 @@ app.post("/technician-login", async (req, res) => {
 });
 
 //Fetch All Technicians Data
-app.get("/getAllTechnicians", async (req, res) => {
+app.get("/getAllTechnicians", fetchUser, async (req, res) => {
+
     try {
-        const allTechnicians = await Technician.find({});
-        res.send({ status: "ok", data: allTechnicians });
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+        const technicianID = req.params.ID;
+        if (adminExist) {
+            const allTechnicians = await Technician.find({});
+            res.send({ status: "ok", data: allTechnicians });
+        } else {
+            res.status(404).send("Admin not found");
+        }
     } catch (error) {
-        console.log(error);
+        res.status(500).send(error.message || "An error occurred");
     }
 });
+
+//Fetch All Technicians Data
+app.get("/getAllVerifiedTechnicians", fetchUser, async (req, res) => {
+    try {
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+
+        if (adminExist) {
+            const allTechnicians = await Technician.find({ isverified: true });
+            res.send({ status: "ok", data: allTechnicians });
+        } else {
+            res.status(404).send("Admin not found");
+        }
+    } catch (error) {
+        res.status(500).send(error.message || "An error occurred");
+    }
+});
+
+app.post("/allotTechnician", fetchUser, async (req, res) => {
+    try {
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+        const allotedTechnician = req.body.technicianID;
+        const orderID = req.body.orderID;
+
+        if (adminExist) {
+
+            // update the order by allotechnician for user
+            await Orders.findOneAndUpdate({ orderId: orderID }, {
+                '$set': {
+                    'technicianAllotted': allotedTechnician
+                }
+            });
+
+            // now assign the job to technician
+
+            const order = await Orders.findOne({ orderId: orderID });
+
+            const job = {
+                address: order.address
+            }
+
+            const response = await Technician.findByIdAndUpdate(allotedTechnician, {
+                '$push': {
+                    jobs: job
+                },
+            })
+
+            if (response) {
+                res.status(200).json({ message: "technician alloted successfully" })
+            }
+
+        } else {
+            res.status(404).send("Admin not found");
+        }
+    } catch (error) {
+        res.status(500).send(error.message || "An error occurred");
+    }
+});
+
 
 // API For Paginated Technicians
 app.get("/paginatedTechnicians", async (req, res) => {
@@ -1600,6 +1668,7 @@ app.post('/uploads', upload.single('file'), (req, res) => {
 
 app.post('/upload-documents', fetchUser, upload.array('file', 5), async (req, res) => {
     try {
+        console.log("hitting");
         const technicianId = req.user.id;
         const technicianExist = await Technician.findOne({ _id: technicianId }, { password: 0 });
 
@@ -1645,7 +1714,7 @@ app.post('/upload-documents', fetchUser, upload.array('file', 5), async (req, re
 
             const updatedUser = await Technician.findByIdAndUpdate(technicianId, {
                 '$set': { 'verificationDoc': technicianFiles }
-            }, { new: true });
+            });
 
             if (updatedUser) {
                 res.send("uploaded successfully");
@@ -1660,6 +1729,56 @@ app.post('/upload-documents', fetchUser, upload.array('file', 5), async (req, re
     }
 
 });
+
+
+
+// app.post("/register-admin", async (req, res) => {
+//     const { email, password } = req.body;
+//     const encryptedPassword = await bcrypt.hash(password, 10);
+//     try {
+
+
+//         // image.create({ image: base64 }
+//         const user = await Admin.create({
+//             email,
+//             password: encryptedPassword,
+//         });
+
+//         if (user) {
+//             res.status(200).json({ message: "Admin created", status: "ok" });
+//         } else {
+//             res.status(200).json({ message: "problem in creating the user", status: "ok" });
+//         }
+//     } catch (error) {
+//         res.send({ message: "error", error });
+//     }
+// });
+
+
+
+///////////////////// Admin Dashboard ////////////////////////
+
+app.get('/technicianVerify/:ID', fetchUser, async (req, res) => {
+    try {
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+        const technicianID = req.params.ID;
+        if (adminExist) {
+            const updatedUser = await Technician.findByIdAndUpdate(technicianID, {
+                '$set': { 'isverified': true }
+            });
+
+            if (updatedUser) {
+                res.status(200).json({ message: "technicican verified sucessfully" });
+            }
+        } else {
+            res.status(404).send("Admin not found");
+        }
+    } catch (error) {
+        res.status(500).send(error.message || "An error occurred");
+    }
+})
+
 
 app.post("/login-admin", async (req, res) => {
 
@@ -1688,33 +1807,6 @@ app.post("/login-admin", async (req, res) => {
         console.log(error);
     }
 });
-
-// app.post("/register-admin", async (req, res) => {
-//     const { email, password } = req.body;
-//     const encryptedPassword = await bcrypt.hash(password, 10);
-//     try {
-
-
-//         // image.create({ image: base64 }
-//         const user = await Admin.create({
-//             email,
-//             password: encryptedPassword,
-//         });
-
-//         if (user) {
-//             res.status(200).json({ message: "Admin created", status: "ok" });
-//         } else {
-//             res.status(200).json({ message: "problem in creating the user", status: "ok" });
-//         }
-//     } catch (error) {
-//         res.send({ message: "error", error });
-//     }
-// });
-
-
-
-///////////////////// Admin Dashboard ////////////////////////
-
 
 app.get("/fetch-all-orders", fetchUser, async (req, res) => {
 

@@ -15,6 +15,8 @@ export default function Users() {
 
     const [showModall, setShowModall] = useState(false);
     const [selectedUser, setSelectedUser] = useState(null); // State to store selected user
+    const [technicians, setTechnicians] = useState([]);
+    const [selectedTechnician, setselectedTechnician] = useState("");
 
     const handleOpenViewModal = (order) => {
         setSelectedUser(order);
@@ -35,6 +37,11 @@ export default function Users() {
             window.location.href = "/";
         }
 
+        getAllOrders();
+        getAllTechnicians();
+    }, []);
+
+    const getAllOrders = async () => {
         fetch("http://localhost:5000/fetch-all-orders", {
             method: "GET",
             crossDomain: true,
@@ -52,7 +59,7 @@ export default function Users() {
                     setLoading(false);
                 }
             });
-    }, []);
+    }
 
 
     const formatDate = (createdAt) => {
@@ -88,10 +95,46 @@ export default function Users() {
         return createdAt;
     };
 
+    const getAllTechnicians = () => {
+        fetch("http://localhost:5000/getAllVerifiedTechnicians", {
+            method: "GET",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Authorization": "bearer " + window.localStorage.getItem("token"),
+            }
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                // console.log(data, "userData");
+                setTechnicians(data.data);
+            });
+    };
+
+    const alloteTechnician = async (id) => {
+        console.log(selectedTechnician, ".......s" + id);
+        fetch("http://localhost:5000/allotTechnician", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                Accept: "application/json",
+                "Access-Control-Allow-Origin": "*",
+                "Authorization": "bearer " + window.localStorage.getItem("token"),
+            },
+            body: JSON.stringify({ technicianID: selectedTechnician, orderID: id })
+        })
+            .then((res) => res.json())
+            .then((data) => {
+                alert(data.message);
+            });
+
+        getAllOrders();
+    };
 
     return (
         <div>
-
+            {console.log(selectedTechnician)}
             <div id="wrapper">
                 <Sidebar />
                 <div id="content-wrapper" className="d-flex flex-column">
@@ -117,23 +160,26 @@ export default function Users() {
                                             <table className="table table-striped">
                                                 <thead className="text-dark">
                                                     <tr>
-                                                        <th width="8%">ID</th>
+                                                        <th>ID</th>
                                                         {/* <th width="2%">Image</th> */}
-                                                        <th width="10%">He/She Like to Do</th>
-                                                        <th width="10%">Phone</th>
-                                                        <th width="10%">Created on</th>
-                                                        <th width="10%">Status</th>
-                                                        <th width="10%">Date/Time</th>
-                                                        {/* <th width="20%">Technician Name</th> */}
-                                                        <th width="10%">Dignose</th>
-                                                        <th width="10%">Assign To</th>
+                                                        <th>Job</th>
+                                                        <th>Phone</th>
+                                                        <th>Status</th>
+                                                        <th>Date/Time</th>
+                                                        <th>Technician Name</th>
+                                                        <th>Dignose</th>
+                                                        <th>Assign To</th>
                                                     </tr>
                                                 </thead>
 
                                                 <tbody className="text-dark">
                                                     {loading ?
-                                                        <div class="w-100 gradient element2">
-                                                        </div>
+                                                        <tr>
+                                                            <td colspan="8">
+                                                                <div class="d-block w-100 gradient element2">
+                                                                </div>
+                                                            </td>
+                                                        </tr>
                                                         : (orders.length > 0) && orders.map((order) => {
                                                             return (
                                                                 <tr key={order.orderId}>
@@ -143,16 +189,26 @@ export default function Users() {
                                                                     </td>
                                                                     <td>{order.whatdoyouliketodo}</td>
                                                                     <td>{order.phone}</td>
-                                                                    <td>{order.pickupdrop}</td>
                                                                     <td>{order.orderstatus}</td>
                                                                     <td>{order.pickupdate} {order.pickuptime}</td>
-                                                                    {/* <td>{order.technicianAllotted}</td> */}
+                                                                    <td>{order.technicianAllotted}</td>
                                                                     <td>{order.diagnoseDone}</td>
                                                                     <td>
-                                                                        <select>
-                                                                            <option>Select Option</option>
-                                                                            <option>Technician Name</option>
-                                                                        </select>
+                                                                        {order.technicianAllotted ? (
+                                                                            <div className="btn btn-success">Allotted</div>
+                                                                        ) : (
+                                                                            <>
+                                                                                <select onChange={(e) => setselectedTechnician(e.target.value)}>
+                                                                                    <option>Select Option</option>
+                                                                                    {(technicians.length > 0) ? technicians.map((verifiedTechy) => (
+                                                                                        <option value={verifiedTechy._id}>{verifiedTechy.email}</option>
+                                                                                    )) : ""}
+                                                                                </select>
+                                                                                <Link to="#" className="btn btn-warning" onClick={() => alloteTechnician(order.orderId)}>
+                                                                                    Allote
+                                                                                </Link>
+                                                                            </>
+                                                                        )}
                                                                     </td>
                                                                 </tr>
                                                             )
@@ -184,28 +240,106 @@ export default function Users() {
                     {selectedUser && (
                         <div className="row">
                             <div className="col-md-12 text-dark">
-                                <p className="text-dark">Order ID: {selectedUser.orderId}</p>
-                                <p className="text-dark">what he/she like to do: {selectedUser.whatdoyouliketodo}</p>
-                                <p className="text-dark">Order Price: {selectedUser.orderprice}</p>
-                                <p className="text-dark">Due Amount: {selectedUser.dueAmount}</p>
-                                <p className="text-dark">Pick/Drop: {selectedUser.pickupdrop}</p>
-                                <p className="text-dark">Technician Name: {selectedUser.technicianAllotted}</p>
-                                <p className="text-dark">Diagnose: {selectedUser.diagnoseDone}</p>
-                                <p className="text-dark">Diagnose Date: {selectedUser.diagnosticsdate.Date}{formatDate(selectedUser.diagnosticsdate)} - {selectedUser.diagnosticsdate.Date}{formatTime(selectedUser.diagnosticsdate)}</p>
-                                <p className="text-dark">Payment Details: {selectedUser.paymentDetails.transactionId}</p>
-                                <p className="text-dark">Order Status: {selectedUser.orderstatus}</p>
-                                <p className="text-dark">Order Date/Time: {selectedUser.lastorderDate.Date}{formatDate(selectedUser.lastorderDate)} - {selectedUser.lastorderDate.Date}{formatTime(selectedUser.lastorderDate)}</p>
+                                <table className="table table-striped text-capitalize">
+                                    <thead>
+                                        <tr>
+                                            <th width="50%"></th>
+                                            <th width="50%"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-dark">
+                                        <tr>
+                                            <td>Order ID:</td>
+                                            <td>{selectedUser.orderId}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>what he/she like to do:</td>
+                                            <td>{selectedUser.whatdoyouliketodo}</td>
+                                        </tr>
+                                        <tr>
+
+                                            <td>Order Price:</td>
+                                            <td>{selectedUser.orderprice}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Due Amount: </td>
+                                            <td>{selectedUser.dueAmount}</td>
+                                        </tr>
+
+                                        <tr>
+                                            <td>Technician Name:</td>
+                                            <td>{selectedUser.technicianAllotted}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Diagnose:</td>
+                                            <td>{selectedUser.diagnoseDone}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Diagnose Date:</td>
+                                            <td>{selectedUser.diagnosticsdate.Date}{formatDate(selectedUser.diagnosticsdate)} - {selectedUser.diagnosticsdate.Date}{formatTime(selectedUser.diagnosticsdate)}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Payment Details:</td>
+                                            <td>{selectedUser.paymentDetails.transactionId}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Order Status:</td>
+                                            <td>{selectedUser.orderstatus}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Order Date/Time:</td>
+                                            <td>{selectedUser.lastorderDate.Date}{formatDate(selectedUser.lastorderDate)} - {selectedUser.lastorderDate.Date}{formatTime(selectedUser.lastorderDate)}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                             <div className="col-md-12 text-dark">
-                                <h4 className="text-dark">Work</h4>
-                                <p className="text-dark">Tasks: {selectedUser.work}</p>
+                                <table className="table table-striped text-capitalize">
+                                    <thead>
+                                        <tr>
+                                            <th width="50%"><h4 className="text-dark">Work</h4></th>
+                                            <th width="50%"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-dark">
+                                        <tr>
+                                            <td>Tasks:</td>
+                                            <td>{selectedUser.work}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                             <div className="col-md-12 text-dark">
-                                <h4 className="text-dark">User Details</h4>
-                                <p className="text-dark">User Email: {selectedUser.email}</p>
-                                <p className="text-dark">User Phone: {selectedUser.phone}</p>
-                                <p className="text-dark">Address: {selectedUser.address.houseno} {selectedUser.address.streetaddress}</p>
-                                <p className="text-dark">Pick Up Date/Time: {selectedUser.pickupdate} - {selectedUser.pickuptime}</p>
+                                <table className="table table-striped text-capitalize">
+                                    <thead>
+                                        <tr>
+                                            <th width="50%"><h4 className="text-dark">User Details</h4></th>
+                                            <th width="50%"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="text-dark">
+                                        <tr>
+                                            <td>User Email: </td>
+                                            <td>{selectedUser.email}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>User Phone: </td>
+                                            <td>{selectedUser.phone}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Address: </td>
+                                            <td>{selectedUser.address.houseno} {selectedUser.address.streetaddress}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pick/Drop:</td>
+                                            <td>{selectedUser.pickupdrop}</td>
+                                        </tr>
+                                        <tr>
+                                            <td>Pick Up Date/Time:</td>
+                                            <td>{selectedUser.pickupdate} - {selectedUser.pickuptime}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
