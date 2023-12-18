@@ -6,7 +6,7 @@ const OrdersDetailsScehma = new mongoose.Schema(
         email: { type: String, required: true },
         phone: { type: String, required: true },
         whatdoyouliketodo: { type: String, default: "none" },
-        orderId: { type: String, required: true },
+        orderId: { type: String, required: true, default: getRandomIntInclusive() },
         orderprice: { type: Number, default: 0 },
         dueAmount: { type: Number, default: 0 },
         lastorderDate: { type: Date, default: Date.now },
@@ -104,5 +104,11 @@ const OrdersDetailsScehma = new mongoose.Schema(
         collection: "OrdersInfo",
     }
 );
+
+function getRandomIntInclusive() {
+    min = Math.ceil(100000);
+    max = Math.floor(999999);
+    return Math.floor(Math.random() * (max - min + 1) + min); // The maximum is inclusive and the minimum is inclusive
+}
 
 mongoose.model("OrdersInfo", OrdersDetailsScehma);

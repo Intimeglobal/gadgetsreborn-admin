@@ -1399,8 +1399,22 @@ app.post('/get-diagnose-payment', fetchUser, async (req, res) => {
 
 ///////////////////// Technicians App ///////////////////////////
 
-// Technician Register API
+app.get('/technician-details', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await Technician.findOne({ _id: userID }, { password: 0, _id: 0 });
+        if (userExist) {
+            res.status(200).json({ data: userExist, status: 'ok' })
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
 
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+// Technician Register API
 app.post("/technician-register", async (req, res) => {
     const { fname, username, email, phone, userType, password, base64 } = req.body;
     const encryptedPassword = await bcrypt.hash(password, 10);
@@ -1731,31 +1745,6 @@ app.post('/upload-documents', fetchUser, upload.array('file', 5), async (req, re
 });
 
 
-
-// app.post("/register-admin", async (req, res) => {
-//     const { email, password } = req.body;
-//     const encryptedPassword = await bcrypt.hash(password, 10);
-//     try {
-
-
-//         // image.create({ image: base64 }
-//         const user = await Admin.create({
-//             email,
-//             password: encryptedPassword,
-//         });
-
-//         if (user) {
-//             res.status(200).json({ message: "Admin created", status: "ok" });
-//         } else {
-//             res.status(200).json({ message: "problem in creating the user", status: "ok" });
-//         }
-//     } catch (error) {
-//         res.send({ message: "error", error });
-//     }
-// });
-
-
-
 ///////////////////// Admin Dashboard ////////////////////////
 
 app.get('/technicianVerify/:ID', fetchUser, async (req, res) => {
@@ -1808,22 +1797,70 @@ app.post("/login-admin", async (req, res) => {
     }
 });
 
-app.get("/fetch-all-orders", fetchUser, async (req, res) => {
 
+app.get('/getTotalOrders/:technicianId', async (req, res) => {
     try {
-        const adminID = req.user.id;
-        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+        const technicianId = req.params.technicianId;
 
-        if (adminExist) {
-            const orders = await Orders.find({});
-            res.status(200).json({ status: "ok", data: orders });
-        } else {
-            res.status(200).json({ status: "ok", message: "wrong credentials" });
-        }
+        // Count the number of orders where the technicianAllotted field matches the provided technicianId
+        const totalOrders = await Orders.countDocuments({ technicianAllotted: technicianId });
+
+        res.json({ status: 'ok', data: totalOrders });
     } catch (error) {
-        res.send({ message: "error", error });
+        console.error(error);
+        res.status(500).json({ status: 'error', message: 'Internal Server Error' });
     }
 });
+
+
+// fetch all the order of the user
+app.get('/fetch-technicians-orders', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await Technician.findOne({ _id: userID }, { password: 0 });
+
+        if (userExist) {
+            const response = await Orders.find({ technicianAllotted: userID });
+
+            if (response) {
+                res.status(200).json({ data: response, status: "ok" });
+            } else {
+                res.status(200).json({ message: "something went wrong" });
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// fethcing the particular order
+app.get('/fetch-technicians-orders/:ID', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await Technician.findOne({ _id: userID }, { password: 0 });
+        const orderID = req.params.ID;
+
+
+        if (userExist) {
+            // console.log(userExist.id);
+            const response = await Orders.findOne({ orderId: orderID })
+            // console.log(response);
+            if (response) {
+                res.status(200).json({ data: response, status: "ok", })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
 
 
 
