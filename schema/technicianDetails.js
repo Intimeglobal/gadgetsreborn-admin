@@ -42,11 +42,24 @@ const TechnicianDetailsScehma = new mongoose.Schema(
             TradeLicence: { type: String, default: "" },
             Photograph: { type: String, default: "" }
         },
+        bankDetails: {
+            Fullname: { type: String, default: "" },
+            AccountNo: { type: String, default: "" },
+            IBAN: { type: String, default: "" },
+        },
         isverified: { type: Boolean, default: false },
         availability: { type: Boolean, default: true },
         technicianrole: { type: String, default: "" },
         balance: { type: Number, default: 0 },
         totalearnings: { type: Number, default: 0 },
+        withdrawalamount: [
+            {
+                withdrawalvalue: { type: String, default: 0 },
+                withdrawalstatus: { type: String, default: "" },
+                withdrawaldate: { type: String, default: "" },
+                withdrawaltime: { type: String, default: "" },
+            }
+        ],
         isOrganization: { type: Boolean, default: false },
         organizationId: { type: String }
     },

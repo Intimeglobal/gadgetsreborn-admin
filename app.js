@@ -1745,6 +1745,113 @@ app.post('/upload-documents', fetchUser, upload.array('file', 5), async (req, re
 });
 
 
+
+app.post('/technician-job-start', async (req, res) => {
+    try {
+        const { technicianId, jobid } = req.body;
+
+        const technician = await Technician.findOne({ technicianId });
+
+        if (!technician) {
+            return res.status(404).json({ message: 'Technician not found' });
+        }
+
+        const job = technician.jobs.find(j => j.jobid === jobid);
+
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+
+        if (job.jobstart) {
+            return res.status(400).json({ message: 'Job already started' });
+        }
+
+        job.jobstart = new Date();
+        await technician.save();
+
+        return res.status(200).json({ message: 'Job started successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+// Endpoint to update job finish time
+app.post('/technician-job-finish', async (req, res) => {
+    try {
+        const { technicianId, jobid } = req.body;
+
+        const technician = await Technician.findOne({ technicianId });
+
+        if (!technician) {
+            return res.status(404).json({ message: 'Technician not found' });
+        }
+
+        const job = technician.jobs.find(j => j.jobid === jobid);
+
+        if (!job) {
+            return res.status(404).json({ message: 'Job not found' });
+        }
+
+        if (job.jobend) {
+            return res.status(400).json({ message: 'Job already finished' });
+        }
+
+        job.jobend = new Date();
+        await technician.save();
+
+        return res.status(200).json({ message: 'Job finished successfully' });
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: 'Internal server error' });
+    }
+});
+
+
+
+// Add Technician Bank Account 
+
+app.post('/add-technician-bank-account', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await Technician.findOne({ _id: userID }, { password: 0, _id: 0 });
+
+        const fullname = req.body.Fullname;
+        const accountno = req.body.AccountNo;
+        const iban = req.body.IBAN;
+
+        if (!fullname || !accountno || !iban) {
+            return res.status(400).json({ message: "Required All Fields" });
+        }
+
+        if (userExist) {
+            const response = await Technician.findOneAndUpdate({ _id: userID }, {
+                '$set': {
+                    'bankDetails.Fullname': fullname,
+                    'bankDetails.AccountNo': accountno,
+                    'bankDetails.IBAN': iban
+                }
+            }, { new: true });
+
+            if (response) {
+                res.status(200).json({ message: "Bank details updated successfully", status: "ok" });
+            } else {
+                res.status(500).json({ message: "Something went wrong while updating bank details" });
+            }
+        } else {
+            res.status(404).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+
+
+
+
 ///////////////////// Admin Dashboard ////////////////////////
 
 app.get('/technicianVerify/:ID', fetchUser, async (req, res) => {
