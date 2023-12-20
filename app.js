@@ -1581,6 +1581,9 @@ app.get("/getAllVerifiedTechnicians", fetchUser, async (req, res) => {
     }
 });
 
+
+
+
 app.post("/allotTechnician", fetchUser, async (req, res) => {
     try {
         const adminID = req.user.id;
@@ -1590,38 +1593,51 @@ app.post("/allotTechnician", fetchUser, async (req, res) => {
 
         if (adminExist) {
 
-            // update the order by allotechnician for user
+            // update the order by alloting technician for the user
             await Orders.findOneAndUpdate({ orderId: orderID }, {
                 '$set': {
                     'technicianAllotted': allotedTechnician
                 }
             });
 
-            // now assign the job to technician
+            // now assign the job to the technician
 
             const order = await Orders.findOne({ orderId: orderID });
 
             const job = {
-                address: order.address
-            }
+                jobid: order.orderId,
+                allotedAt: new Date(), // Use the current date and time
+                jobstart: null,
+                jobend: null,
+                payment: 0,
+                work: order.work,
+                address: order.address,
+            };
 
             const response = await Technician.findByIdAndUpdate(allotedTechnician, {
-                '$push': {
-                    jobs: job
+                $push: {
+                    jobs: job,
                 },
-            })
+            });
 
             if (response) {
-                res.status(200).json({ message: "technician alloted successfully" })
+                res.status(200).json({ message: "Technician allotted successfully" });
+            } else {
+                res.status(404).json({ message: "Technician not found" });
             }
 
         } else {
             res.status(404).send("Admin not found");
         }
     } catch (error) {
+        console.error(error);
         res.status(500).send(error.message || "An error occurred");
     }
 });
+
+
+
+
 
 
 // API For Paginated Technicians
@@ -1746,64 +1762,56 @@ app.post('/upload-documents', fetchUser, upload.array('file', 5), async (req, re
 
 
 
-app.post('/technician-job-start', async (req, res) => {
+app.post('/technician-job-start', fetchUser, async (req, res) => {
     try {
-        const { technicianId, jobid } = req.body;
+        const userID = req.user.id;
+        const { jobId, jobstart } = req.body;
 
-        const technician = await Technician.findOne({ technicianId });
+        const response = await Technician.findOneAndUpdate(
+            { _id: userID, 'jobs.jobid': jobId },
+            { '$set': { 'jobs.$.jobstart': jobstart } },
+            { new: true }
+        );
 
-        if (!technician) {
-            return res.status(404).json({ message: 'Technician not found' });
+        if (response) {
+            res.status(200).json({ message: "Job Start successfully", status: "ok" });
+        } else {
+            res.status(404).json({ message: "Job not found" });
         }
-
-        const job = technician.jobs.find(j => j.jobid === jobid);
-
-        if (!job) {
-            return res.status(404).json({ message: 'Job not found' });
-        }
-
-        if (job.jobstart) {
-            return res.status(400).json({ message: 'Job already started' });
-        }
-
-        job.jobstart = new Date();
-        await technician.save();
-
-        return res.status(200).json({ message: 'Job started successfully' });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal server error' });
+        console.log(error);
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
+
 // Endpoint to update job finish time
-app.post('/technician-job-finish', async (req, res) => {
+app.post('/technician-job-finish', fetchUser, async (req, res) => {
     try {
-        const { technicianId, jobid } = req.body;
+        const userID = req.user.id;
+        const userExist = await Technician.findOne({ _id: userID }, { password: 0, _id: 0 });
 
-        const technician = await Technician.findOne({ technicianId });
+        const jobend = req.body.jobend;
 
-        if (!technician) {
-            return res.status(404).json({ message: 'Technician not found' });
+        if (userExist) {
+            const response = await Technician.findOneAndUpdate({ _id: userID }, {
+                '$set': {
+                    'jobs.jobend': jobend,
+                }
+            }, { new: true });
+
+            if (response) {
+                res.status(200).json({ message: "Job Finish successfully", status: "ok" });
+            } else {
+                res.status(500).json({ message: "Something went wrong while updating job details" });
+            }
+        } else {
+            res.status(404).json({ message: "User does not exist" });
         }
 
-        const job = technician.jobs.find(j => j.jobid === jobid);
-
-        if (!job) {
-            return res.status(404).json({ message: 'Job not found' });
-        }
-
-        if (job.jobend) {
-            return res.status(400).json({ message: 'Job already finished' });
-        }
-
-        job.jobend = new Date();
-        await technician.save();
-
-        return res.status(200).json({ message: 'Job finished successfully' });
     } catch (error) {
-        console.error(error);
-        return res.status(500).json({ message: 'Internal server error' });
+        console.log(error);
+        res.status(500).json({ message: "Internal server error" });
     }
 });
 
@@ -1847,9 +1855,6 @@ app.post('/add-technician-bank-account', fetchUser, async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
-
-
-
 
 
 ///////////////////// Admin Dashboard ////////////////////////
@@ -1968,6 +1973,24 @@ app.get('/fetch-technicians-orders/:ID', fetchUser, async (req, res) => {
         console.log(error);
     }
 })
+
+
+app.get("/fetch-all-orders", fetchUser, async (req, res) => {
+
+    try {
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+
+        if (adminExist) {
+            const orders = await Orders.find({});
+            res.status(200).json({ status: "ok", data: orders });
+        } else {
+            res.status(200).json({ status: "ok", message: "wrong credentials" });
+        }
+    } catch (error) {
+        res.send({ message: "error", error });
+    }
+});
 
 
 
