@@ -1393,10 +1393,6 @@ app.post('/get-diagnose-payment', fetchUser, async (req, res) => {
 
 
 
-
-
-
-
 ///////////////////// Technicians App ///////////////////////////
 
 app.get('/technician-details', fetchUser, async (req, res) => {
@@ -1581,9 +1577,6 @@ app.get("/getAllVerifiedTechnicians", fetchUser, async (req, res) => {
     }
 });
 
-
-
-
 app.post("/allotTechnician", fetchUser, async (req, res) => {
     try {
         const adminID = req.user.id;
@@ -1634,11 +1627,6 @@ app.post("/allotTechnician", fetchUser, async (req, res) => {
         res.status(500).send(error.message || "An error occurred");
     }
 });
-
-
-
-
-
 
 // API For Paginated Technicians
 app.get("/paginatedTechnicians", async (req, res) => {
@@ -1789,26 +1777,19 @@ app.post('/technician-job-start', fetchUser, async (req, res) => {
 app.post('/technician-job-finish', fetchUser, async (req, res) => {
     try {
         const userID = req.user.id;
-        const userExist = await Technician.findOne({ _id: userID }, { password: 0, _id: 0 });
+        const { jobId, jobend } = req.body;
 
-        const jobend = req.body.jobend;
+        const response = await Technician.findOneAndUpdate(
+            { _id: userID, 'jobs.jobid': jobId },
+            { '$set': { 'jobs.$.jobend': jobend } },
+            { new: true }
+        );
 
-        if (userExist) {
-            const response = await Technician.findOneAndUpdate({ _id: userID }, {
-                '$set': {
-                    'jobs.jobend': jobend,
-                }
-            }, { new: true });
-
-            if (response) {
-                res.status(200).json({ message: "Job Finish successfully", status: "ok" });
-            } else {
-                res.status(500).json({ message: "Something went wrong while updating job details" });
-            }
+        if (response) {
+            res.status(200).json({ message: "Job Finish successfully", status: "ok" });
         } else {
-            res.status(404).json({ message: "User does not exist" });
+            res.status(404).json({ message: "Job not found" });
         }
-
     } catch (error) {
         console.log(error);
         res.status(500).json({ message: "Internal server error" });
@@ -1855,6 +1836,8 @@ app.post('/add-technician-bank-account', fetchUser, async (req, res) => {
         res.status(500).json({ message: "Internal server error" });
     }
 });
+
+
 
 
 ///////////////////// Admin Dashboard ////////////////////////
@@ -1974,7 +1957,6 @@ app.get('/fetch-technicians-orders/:ID', fetchUser, async (req, res) => {
     }
 })
 
-
 app.get("/fetch-all-orders", fetchUser, async (req, res) => {
 
     try {
@@ -1991,6 +1973,10 @@ app.get("/fetch-all-orders", fetchUser, async (req, res) => {
         res.send({ message: "error", error });
     }
 });
+
+
+
+
 
 
 
