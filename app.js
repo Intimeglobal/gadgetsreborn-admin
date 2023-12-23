@@ -906,6 +906,7 @@ app.get("/allnotifications", async (req, res) => {
     }
 })
 
+
 // creating the user order details byupdating the user details
 app.post('/create-order', fetchUser, async (req, res) => {
     try {
