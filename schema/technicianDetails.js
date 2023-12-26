@@ -43,15 +43,22 @@ const TechnicianDetailsScehma = new mongoose.Schema(
             Photograph: { type: String, default: "" }
         },
         bankDetails: {
-            Fullname: { type: String, default: "" },
-            AccountNo: { type: String, default: "" },
-            IBAN: { type: String, default: "" },
+            Fullname: { type: String, default: "", required: true },
+            AccountNo: { type: String, default: "", required: true },
+            IBAN: { type: String, default: "", required: true },
         },
         isverified: { type: Boolean, default: false },
         availability: { type: Boolean, default: true },
         technicianrole: { type: String, default: "" },
         balance: { type: Number, default: 0 },
         totalearnings: { type: Number, default: 0 },
+        withdrawalrequest: [
+            {
+                withdrawalamount: { type: String, default: 0 },
+                withdrawalrequestdatetime: { type: Date, default: Date.now },
+                withdrawalrequeststatus: { type: String, default: "inprogress" }, // In progress, Proceed, Declined
+            }
+        ],
         withdrawalamount: [
             {
                 withdrawalvalue: { type: String, default: 0 },

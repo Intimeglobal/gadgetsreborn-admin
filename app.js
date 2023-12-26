@@ -72,6 +72,7 @@ require("./schema/modal");
 require("./schema/orders");
 require("./schema/warranty");
 require("./schema/notification");
+require("./schema/technicianNotification");
 require("./schema/admin");
 
 const User = mongoose.model("UserInfo");
@@ -81,6 +82,7 @@ const Models = mongoose.model("ModelInfo");
 const Orders = mongoose.model("OrdersInfo");
 const Warranty = mongoose.model("WarrantyInfo");
 const Notification = mongoose.model("NotificationInfo");
+const TechnicianNotification = mongoose.model("TechnicianNotification");
 const Admin = mongoose.model("admin");
 const accountSid = "AC76ab0a9ce0f377a72c7c1ca6dc8c432a";
 const authToken = process.env.TWILIO_AUTH_TOKEN;
@@ -1972,6 +1974,171 @@ app.get("/fetch-all-orders", fetchUser, async (req, res) => {
         }
     } catch (error) {
         res.send({ message: "error", error });
+    }
+});
+
+app.post('/withdrawal', fetchUser, async (req, res) => {
+    try {
+        const { withdrawalamount } = req.body;
+
+        // Validating the withdrawal amount
+        if (!withdrawalamount) {
+            return res.status(400).json({ message: "Withdrawal amount is required" });
+        }
+
+        const userID = req.user.id;
+
+        // Check if the user exists
+        const userExist = await Technician.findOne({ _id: userID });
+        if (!userExist) {
+            return res.status(404).json({ message: "User does not exist" });
+        }
+
+        // Creating a new withdrawal request
+        const newWithdrawalRequest = {
+            withdrawalamount,
+            // withdrawalrequestdatetime will be set to default (current time)
+            // withdrawalrequeststatus will be set to default ("inprogress")
+        };
+
+        // Update the technician's document with the new withdrawal request
+        const updatedUser = await Technician.findByIdAndUpdate(userID,
+            { $push: { withdrawalrequest: newWithdrawalRequest } },
+            { new: true }
+        );
+
+        if (updatedUser) {
+            return res.status(200).json({ message: "Withdrawal Request sent successfully", status: "ok" });
+        } else {
+            return res.status(500).json({ message: "Failed to send Withdrawal Request" });
+        }
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.get('/technician/withdrawal-requests', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+
+        // Find the technician by userID
+        const technician = await Technician.findById(userID);
+
+        if (!technician) {
+            return res.status(404).json({ message: "Technician not found" });
+        }
+
+        // Send the withdrawal requests to the client
+        res.json({ withdrawalRequests: technician.withdrawalrequest });
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.get("/getAllTechnician", async (req, res) => {
+    try {
+        const allUser = await Technician.find({});
+        res.send({ status: "ok", data: allUser });
+    } catch (error) {
+        console.log(error);
+    }
+});
+
+app.post('/Technician-notifications-added', async (req, res) => {
+    try {
+        const { userId, notificationtype, notification } = req.body;
+
+        // Check if the user exists
+        const userExist = await Technician.findOne({ _id: userId });
+        if (!userExist) {
+            return res.status(404).json({ message: "User does not exist" });
+        }
+
+        // Creating a new notification
+        const newNotification = {
+            notificationtype,
+            notificationmessage: notification,  // Correct the property name
+        };
+
+        // Update the technician's document with the new notification
+        const updatedUser = await TechnicianNotification.findByIdAndUpdate(userId,
+            { $push: { notification: newNotification } },
+            { new: true }
+        );
+
+        if (updatedUser) {
+            return res.status(200).json({ message: "Notification sent successfully", status: "ok" });
+        } else {
+            return res.status(500).json({ message: "Failed to send notification" });
+        }
+
+    } catch (error) {
+        console.error(error);
+        return res.status(500).json({ message: "Internal server error" });
+    }
+});
+
+app.post("/techniciannotifications-added", async (req, res) => {
+    const { user, notificationtype, notification } = req.body;
+    try {
+        await TechnicianNotification.create({
+            user,
+            notificationtype,
+            notification
+        });
+        res.send({ status: "ok" });
+    } catch (error) {
+        res.send({ status: "error", error });
+    }
+})
+
+app.get("/alltech-notifications", async (req, res) => {
+    try {
+        const alltechnotifications = await TechnicianNotification.find({});
+        res.send({ status: "ok", data: alltechnotifications });
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+
+app.get("/fetch-all-tech-notifications", fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+
+        // Fetch notifications specific to the technician
+        const techNotifications = await TechnicianNotification.find({ user: userID });
+
+        if (techNotifications.length > 0) {
+            res.status(200).json({ status: "ok", data: techNotifications });
+        } else {
+            res.status(200).json({ status: "ok", message: "No Any Notification Exists" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).send({ message: "error", error: error.message });
+    }
+});
+
+app.post('/notifications/mark-as-read/:notificationId', fetchUser, async (req, res) => {
+    try {
+        const { notificationId } = req.params;
+        const notification = await TechnicianNotification.findByIdAndUpdate(
+            notificationId,
+            { $set: { isRead: true } }, // Corrected this line
+            { new: true }
+        );
+        if (!notification) {
+            return res.status(404).send('Notification not found');
+        }
+
+        res.status(200).json(notification);
+    } catch (error) {
+        res.status(500).send('Server error');
     }
 });
 
