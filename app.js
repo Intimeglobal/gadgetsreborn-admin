@@ -11,6 +11,10 @@ app.set("view engine", "ejs");
 app.use(express.urlencoded({ extended: false }));
 const Mailgen = require('mailgen');
 const twilio = require('twilio');
+const apiKey = 'ba246ea6cefb8f2fc1a9026f8f3225d9';
+const apiSecret = 'b85b078bc59fe94574ae18595f48fe0c';
+var smsglobal = require('smsglobal')(apiKey, apiSecret);
+
 const { uid } = require('uid');
 
 const Stripe = require("stripe");
@@ -44,14 +48,8 @@ const fetchUser = require("./middleware/fetchUser");
 const cors = require("cors");
 const { restart } = require("nodemon");
 const { type } = require("os");
-const { ConversationContextImpl } = require("twilio/lib/rest/conversations/v1/conversation");
+// const { ConversationContextImpl } = require("twilio/lib/rest/conversations/v1/conversation");
 app.use(cors());
-// app.use(express.json())
-// // Create a storage engine for multer
-// const storage = multer.memoryStorage();
-
-// // Initialize multer with the storage engine
-// const upload = multer({ storage: multer.memoryStorage() });
 
 // Database connection
 const mongoUrl = process.env.URL;
@@ -67,26 +65,39 @@ mongoose
 // Schema Start 
 require("./schema/userDetails");
 require("./schema/technicianDetails");
-require("./schema/product");
-require("./schema/modal");
 require("./schema/orders");
 require("./schema/warranty");
 require("./schema/notification");
 require("./schema/technicianNotification");
 require("./schema/admin");
+require("./schema/organizationDetails");
+require("./schema/type");
+require("./schema/brand");
+require("./schema/series");
+require("./schema/modal");
+require("./schema/defect");
+
 
 const User = mongoose.model("UserInfo");
 const Technician = mongoose.model("TechnicianInfo");
-const Products = mongoose.model("ProductInfo");
-const Models = mongoose.model("ModelInfo");
+const Company = mongoose.model("OrganizationDetails");
 const Orders = mongoose.model("OrdersInfo");
 const Warranty = mongoose.model("WarrantyInfo");
 const Notification = mongoose.model("NotificationInfo");
 const TechnicianNotification = mongoose.model("TechnicianNotification");
 const Admin = mongoose.model("admin");
+
+const Type = mongoose.model("TypeInfo");
+const Mobilebrands = mongoose.model("BrandInfo");
+const Series = mongoose.model("SeriesInfo");
+const Models = mongoose.model("ModelInfo");
+const Defect = mongoose.model("DefectInfo");
+
+
 const accountSid = "AC76ab0a9ce0f377a72c7c1ca6dc8c432a";
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
+
 const servicesid = 'VA3072be8c6102f371a7fcd7ffdc7a2b46'
 const aws = require('aws-sdk');
 const fs = require('fs');
@@ -138,7 +149,7 @@ const sendEmailVerification = async (recipientEmail) => {
     // creating the email template for it
     let Email = {
         body: {
-            name: "Anonymous",
+            name: "Gadgetsreborn",
             intro: "Welcome to ! We' are excited to have you on board.",
             action: {
                 instructions: "To confirm your email, please enter this code",
@@ -693,150 +704,150 @@ app.get("/paginatedUsers", async (req, res) => {
 })
 
 // Modal Added API
-app.post("/modal-added", async (req, res) => {
-    const { modelname } = req.body;
-    try {
-        const oldModel = await Models.findOne({ modelname });
-        if (oldModel) {
-            return res.json({ error: "Model Already Exists" });
-        }
-        await Models.create({
-            modelname,
-        });
-        res.send({ status: "ok" });
-    } catch (error) {
-        res.send({ status: "error", error });
-    }
-});
+// app.post("/modal-added", async (req, res) => {
+//     const { modelname } = req.body;
+//     try {
+//         const oldModel = await Models.findOne({ modelname });
+//         if (oldModel) {
+//             return res.json({ error: "Model Already Exists" });
+//         }
+//         await Models.create({
+//             modelname,
+//         });
+//         res.send({ status: "ok" });
+//     } catch (error) {
+//         res.send({ status: "error", error });
+//     }
+// });
 
 // Get All Models API
-app.get("/models", async (req, res) => {
-    try {
-        const allModels = await Models.find({});
-        res.send({ status: "ok", data: allModels });
-    } catch (error) {
-        console.log(error);
-    }
-});
+// app.get("/models", async (req, res) => {
+//     try {
+//         const allModels = await Models.find({});
+//         res.send({ status: "ok", data: allModels });
+//     } catch (error) {
+//         console.log(error);
+//     }
+// });
 
 // Delete Model From Database API
-app.delete("/models/:id", async (req, res) => {
-    const id = req.params.id;
-    try {
-        const deleteModel = await Models.findByIdAndDelete({ _id: id });
-        if (!req.params.id) {
-            return res.status(400).send();
-        }
-        res.send(deleteModel);
-    } catch (error) {
-        res.status(500).send(error);
-    }
-});
+// app.delete("/models/:id", async (req, res) => {
+//     const id = req.params.id;
+//     try {
+//         const deleteModel = await Models.findByIdAndDelete({ _id: id });
+//         if (!req.params.id) {
+//             return res.status(400).send();
+//         }
+//         res.send(deleteModel);
+//     } catch (error) {
+//         res.status(500).send(error);
+//     }
+// });
 
 // API For Paginated Technicians
-app.get("/paginatedModel", async (req, res) => {
-    const allUser = await Models.find({});
-    const page = parseInt(req.query.page)
-    const limit = parseInt(req.query.limit)
+// app.get("/paginatedModel", async (req, res) => {
+//     const allUser = await Models.find({});
+//     const page = parseInt(req.query.page)
+//     const limit = parseInt(req.query.limit)
 
-    const startIndex = (page - 1) * limit
-    const lastIndex = (page) * limit
+//     const startIndex = (page - 1) * limit
+//     const lastIndex = (page) * limit
 
-    const results = {}
-    results.totalUser = allUser.length;
-    results.pageCount = Math.ceil(allUser.length / limit);
+//     const results = {}
+//     results.totalUser = allUser.length;
+//     results.pageCount = Math.ceil(allUser.length / limit);
 
-    if (lastIndex < allUser.length) {
-        results.next = {
-            page: page + 1,
-        }
-    }
-    if (startIndex > 0) {
-        results.prev = {
-            page: page - 1,
-        }
-    }
+//     if (lastIndex < allUser.length) {
+//         results.next = {
+//             page: page + 1,
+//         }
+//     }
+//     if (startIndex > 0) {
+//         results.prev = {
+//             page: page - 1,
+//         }
+//     }
 
-    results.result = allUser.slice(startIndex, lastIndex);
+//     results.result = allUser.slice(startIndex, lastIndex);
 
-    res.json(results)
-})
+//     res.json(results)
+// })
 
 // Product Added API
-app.post("/product-added", async (req, res) => {
-    const { modalname, productname, price, status } = req.body;
-    try {
-        await Products.create({
-            modalname,
-            productname,
-            price,
-            status,
-        });
-        res.send({ status: "ok" });
-    } catch (error) {
-        res.send({ status: "error", error });
-    }
-})
+// app.post("/product-added", async (req, res) => {
+//     const { modalname, productname, price, status } = req.body;
+//     try {
+//         await Products.create({
+//             modalname,
+//             productname,
+//             price,
+//             status,
+//         });
+//         res.send({ status: "ok" });
+//     } catch (error) {
+//         res.send({ status: "error", error });
+//     }
+// })
 
 // Get All Product API
-app.get("/products", async (req, res) => {
-    try {
-        const allProducts = await Products.find({});
-        res.send({ status: "ok", data: allProducts });
-    } catch (error) {
-        console.log(error);
-    }
-});
+// app.get("/products", async (req, res) => {
+//     try {
+//         const allProducts = await Products.find({});
+//         res.send({ status: "ok", data: allProducts });
+//     } catch (error) {
+//         console.log(error);
+//     }
+// });
 
 // Update Products Data API
-app.post("/updateProducts", async (req, res) => {
-    try {
-        const { _id, price, status } = req.body;
-        // Use Mongoose to update the user by _id
-        const updatedData = await Products.findByIdAndUpdate(_id, { price, status }, { new: true });
+// app.post("/updateProducts", async (req, res) => {
+//     try {
+//         const { _id, price, status } = req.body;
+//         // Use Mongoose to update the user by _id
+//         const updatedData = await Products.findByIdAndUpdate(_id, { price, status }, { new: true });
 
-        if (!updatedData) {
-            // If user not found, return an error
-            return res.status(404).json({ error: "User not found" });
-        }
+//         if (!updatedData) {
+//             // If user not found, return an error
+//             return res.status(404).json({ error: "User not found" });
+//         }
 
-        // User updated successfully, send the updated user as a response
-        res.status(200).json({ message: "Product updated successfully", user: updatedData });
-    } catch (error) {
-        // Handle any errors and send an error response
-        console.error(error);
-        res.status(500).json({ error: "Internal server error" });
-    }
-});
+//         // User updated successfully, send the updated user as a response
+//         res.status(200).json({ message: "Product updated successfully", user: updatedData });
+//     } catch (error) {
+//         // Handle any errors and send an error response
+//         console.error(error);
+//         res.status(500).json({ error: "Internal server error" });
+//     }
+// });
 
 // API For Paginated Products
-app.get("/paginatedProducts", async (req, res) => {
-    const allProducts = await Products.find({});
-    const page = parseInt(req.query.page)
-    const limit = parseInt(req.query.limit)
+// app.get("/paginatedProducts", async (req, res) => {
+//     const allProducts = await Products.find({});
+//     const page = parseInt(req.query.page)
+//     const limit = parseInt(req.query.limit)
 
-    const startIndex = (page - 1) * limit
-    const lastIndex = (page) * limit
+//     const startIndex = (page - 1) * limit
+//     const lastIndex = (page) * limit
 
-    const results = {}
-    results.totalUser = allProducts.length;
-    results.pageCount = Math.ceil(allProducts.length / limit);
+//     const results = {}
+//     results.totalUser = allProducts.length;
+//     results.pageCount = Math.ceil(allProducts.length / limit);
 
-    if (lastIndex < allProducts.length) {
-        results.next = {
-            page: page + 1,
-        }
-    }
-    if (startIndex > 0) {
-        results.prev = {
-            page: page - 1,
-        }
-    }
+//     if (lastIndex < allProducts.length) {
+//         results.next = {
+//             page: page + 1,
+//         }
+//     }
+//     if (startIndex > 0) {
+//         results.prev = {
+//             page: page - 1,
+//         }
+//     }
 
-    results.result = allProducts.slice(startIndex, lastIndex);
+//     results.result = allProducts.slice(startIndex, lastIndex);
 
-    res.json(results)
-});
+//     res.json(results)
+// });
 
 // Dashboard Palletes Total Number of users
 app.get('/total-users', async (req, res) => {
@@ -1191,8 +1202,6 @@ app.post('/add-pickup-date', fetchUser, async (req, res) => {
                 }
             })
 
-
-
             if (response) {
                 res.status(200).json({ message: "date and time added successfully", status: "ok", orderID: userExist.currentOrderId })
             } else {
@@ -1398,6 +1407,501 @@ app.post('/get-diagnose-payment', fetchUser, async (req, res) => {
 
 ///////////////////// Technicians App ///////////////////////////
 
+// creating the Company details
+app.post('/create-order', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const wdyltd = req.body.wdyltd;
+        let orderId = uid();
+        const userExist = await User.findOne({ _id: userID }, { password: 0 });
+        // res.send(userExist);
+        if (userExist) {
+            const orderdetails = {
+                whatdoyouliketodo: wdyltd,
+                email: userExist.email,
+                phone: userExist.phone,
+                userID: userExist.id,
+            }
+
+            const data = await Orders.create(
+                orderdetails,
+            )
+            if (data) {
+
+                await User.findByIdAndUpdate(
+                    userExist.id,
+                    {
+                        '$set': {
+                            'currentOrderId': orderId
+                        }
+                    }
+                )
+                res.status(200).json({ message: "order generated successfully", status: "ok" })
+            } else {
+
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+
+});
+
+
+//////////////////////////////////////////// Register Company ////////////////////////////////////////
+
+// Technician Register API
+app.post("/company-register", async (req, res) => {
+    const { ownername, companyemail, phone, password } = req.body;
+    const encryptedPassword = await bcrypt.hash(password, 10);
+
+    console.log(req.body);
+
+    try {
+        const user = await Company.create({
+            ownername,
+            companyemail,
+            phone,
+            password: encryptedPassword,
+        });
+
+        await user.save();
+
+        if (user) {
+            res.status(200).json({ message: "Company Registered", status: "ok" });
+        } else {
+            res.status(200).json({ message: "Problem in creating the user", status: "ok" });
+        }
+
+    } catch (error) {
+        res.send({ message: "error", error });
+    }
+});
+
+app.post('/company-email-verification', async (req, res) => {
+    try {
+        const { companyemail } = req.body;
+
+        // if any empty property remains
+        if (!companyemail) {
+            return res
+                .status(404)
+                .json({ message: "Please fill the required field" });
+        }
+        // checking whether user exist
+        const userExist = await Company.findOne({ companyemail: companyemail });
+        if (userExist) {
+            console.log("Company Exist");
+            return res.status(422).json({ message: "Company Already Exist" });
+        }
+        await sendEmailVerification(companyemail);
+
+        // for time out of OTP after 60 seconds
+        OTPTIMEOUT(companyemail);
+        res.status(200).json({ message: "OTP sent Successfully", status: "ok" });
+    } catch (error) {
+        console.log(error.message);
+    }
+})
+
+// for OTP verification
+app.post('/company-otp-verification', async (req, res) => {
+    const { otp, companyemail } = req.body;
+    try {
+        console.log(otp, companyemail);
+
+        // Check if the email already exists
+        const existingUser = await Company.findOne({ companyemail });
+        if (existingUser) {
+            return res.status(400).json({ message: "Company already exists" });
+        }
+
+        // Check if the OTP is valid
+        const storedOTP = map.get(companyemail);
+        if (storedOTP && (+otp) === storedOTP) {
+            console.log("Verification done");
+            res.status(200).json({ message: "Verification done", status: "ok" });
+        } else {
+            res.status(400).json({ message: "Wrong OTP" });
+        }
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Internal Server Error" });
+    }
+});
+
+// sending otp using smsglobal
+app.post('/company-mobile-otp', async (req, res) => {
+    try {
+        console.log("reached");
+        const phonenumber = req.body.phone;
+
+        const oldPhone = await Company.findOne({ phone: req.body.phone });
+        console.log(phonenumber);
+        if (oldPhone) {
+            return res.status(400).json({ message: "phone number already exist" });
+        }
+
+        const response = await client.verify.v2.services(servicesid)
+            .verifications
+            .create({ to: phonenumber, channel: 'sms' });
+        console.log(response);
+        if (response) {
+            res.status(200).json({ message: "OTP sent successfully", status: "ok" })
+        } else {
+            res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+        }
+
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+    }
+});
+
+// app.post('/company-mobile-otp', async (req, res) => {
+//     try {
+//         console.log("Reached");
+//         const phoneNumber = req.body.phone;
+//         const origin = ""; // Replace "YourSenderNumber" with your actual sender number or sender ID provided by SMSGlobal
+//         console.log(origin);
+//         const oldPhone = await Company.findOne({ phone: phoneNumber });
+//         if (oldPhone) {
+//             return res.status(400).json({ message: "Phone number already exists" });
+//         }
+
+//         const verificationCode = Math.floor(Math.random() * 900000) + 100000;
+//         const message = `{*code*} is your OTP ${verificationCode}`; // Include the {*code*} placeholder
+
+//         // Construct the payload for SMSGlobal
+//         const payload = {
+//             origin: origin,
+//             message: message,
+//             destination: phoneNumber
+//         };
+
+//         // Send OTP using SMSGlobal
+//         smsglobal.otp.send(payload, function (error, response) {
+//             if (response) {
+//                 console.log(response);
+//                 res.status(200).json({ message: "OTP sent successfully", status: "ok" });
+//             } else {
+//                 console.error("Error sending OTP:", error);
+//                 if (error.data && error.data.errors) {
+//                     console.error("API errors:", error.data.errors);
+//                 }
+//                 res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+//             }
+//         });
+
+//     } catch (error) {
+//         console.error("Error sending mobile OTP:", error);
+//         res.status(500).json({ message: "Error sending mobile OTP", error: error.message });
+//     }
+// });
+
+
+
+
+
+
+app.post('/company-otp-mobile-verification', async (req, res) => {
+    try {
+        // console.log("reached");
+        const phonenumber = req.body.phone;
+        const otp = req.body.otp;
+        // const otp = ccccccccc
+        console.log(phonenumber);
+
+        const response = await client.verify.v2.services(servicesid)
+            .verificationChecks
+            .create({ to: phonenumber, code: otp })
+
+        if (response.status === "approved") {
+            res.status(200).json({ message: response.status, status: "ok" });
+        } else {
+            res.status(200).json({ message: "OTP not match", status: "ok" });
+        }
+    } catch (error) {
+        res.status(500).json({ message: "Internal Server Error", error });
+    }
+})
+
+
+// Company-Login API
+
+// app.post("/company-login", async (req, res) => {
+//     const { phone, password } = req.body;
+
+//     const user = await Company.findOne({ phone });
+
+//     if (!user) {
+//         return res.send({ error: "Company Not Found" });
+//     }
+//     if (await bcrypt.compare(password, user.password)) {
+
+//         const data = {
+//             user: {
+//                 id: user._id,
+//             },
+//         };
+//         const token = jwt.sign(data, JWT_SECRET);
+//         // const response = await Orders.findOne({ orderId: user.currentOrderId })
+//         const responseData = {
+//             documentstatus: user.documentstatus,
+//             isverified: user.isverified,
+//             token: token,
+//             status: "ok"
+//         };
+//         // console.log(response);
+//         res.status(200).json(responseData);
+//     } else {
+//         res.json({ status: "error", message: "Invalid Password" });
+//     }
+// });
+
+app.post("/company-login", async (req, res) => {
+    const { phone, password } = req.body;
+
+    const user = await Company.findOne({ phone });
+
+    if (!user) {
+        return res.send({ error: "Company Not Found" });
+    }
+    if (await bcrypt.compare(password, user.password)) {
+        const data = {
+            user: {
+                id: user._id,
+            },
+        };
+        const token = jwt.sign(data, JWT_SECRET);
+
+        // Include organization ID in the response if available
+        const responseData = {
+            documentstatus: user.documentstatus,
+            isverified: user.isverified,
+            organizationId: user.organizationId, // Add this line if organizationId exists in Company schema
+            token: token,
+            status: "ok"
+        };
+
+        res.status(200).json(responseData);
+    } else {
+        res.json({ status: "error", message: "Invalid Password" });
+    }
+});
+
+
+
+
+app.post('/update-company-details', fetchUser, async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: "Unauthorized", status: "error" });
+        }
+
+        const userID = req.user.id;
+        const userExist = await Company.findOne({ _id: userID }, { password: 0 });
+        const { companyname, tradelicenseno, region, companyaddress } = req.body;
+        console.log(req.body);
+
+        if (userExist) {
+            await Company.findByIdAndUpdate(
+                userExist.id,
+                {
+                    $set: {
+                        companyname,
+                        tradelicenseno,
+                        region,
+                        companyaddress,
+                    }
+                }
+            );
+            res.status(200).json({ message: "Company Details Updated", status: "ok" });
+        } else {
+            res.status(400).json({ message: "Something Went Wrong While Updating", status: "error" });
+        }
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+
+app.post('/owner-details', fetchUser, async (req, res) => {
+    try {
+        if (!req.user) {
+            return res.status(401).json({ message: "Unauthorized", status: "error" });
+        }
+
+        const userID = req.user.id;
+        const userExist = await Company.findOne({ _id: userID }, { password: 0 });
+        const { owneremiratesId, ownerpassportno, contactpersonname, contactpersonno, tradelicenseexp, companylocation } = req.body;
+
+        console.log(req.body);
+
+        if (userExist) {
+            await Company.findByIdAndUpdate(
+                userExist.id,
+                {
+                    $set: {
+                        owneremiratesId,
+                        ownerpassportno,
+                        contactpersonname,
+                        contactpersonno,
+                        tradelicenseexp,
+                        companylocation,
+                    }
+                }
+            );
+            res.status(200).json({ message: "Company Details Updated", status: "ok" });
+        } else {
+            res.status(400).json({ message: "Something Went Wrong While Updating", status: "error" });
+        }
+    } catch (err) {
+        console.error(err.message);
+        res.status(500).send("Server Error");
+    }
+});
+
+
+app.post('/upload-company-documents', fetchUser, upload.array('file', 5), async (req, res) => {
+    try {
+        console.log("hitting");
+        const organizationId = req.user.id;
+        const companyExist = await Company.findOne({ _id: organizationId }, { password: 0 });
+
+        if (companyExist) {
+            let s3 = new aws.S3();
+            let uploadPromises = req.files.map((file) => {
+                return new Promise((resolve, reject) => {
+                    const { path, filename, originalname } = file;
+                    const documentType = originalname.split("-")[0];
+                    let uploadParams = { Bucket: 'gadgetsrebon', Key: '', Body: '', ACL: 'public-read' };
+                    let fileName = uid() + filename;
+
+                    let fileStream = fs.createReadStream(path);
+                    fileStream.on('error', function (err) {
+                        console.log('File Error', err);
+                        reject(err);
+                    });
+
+                    uploadParams.Body = fileStream;
+                    uploadParams.Key = fileName;
+
+                    s3.upload(uploadParams, function (err, data) {
+                        if (err) {
+                            console.log("Error", err);
+                            reject(err);
+                        } else {
+                            fs.unlink(path, (unlinkErr) => {
+                                if (unlinkErr) {
+                                    console.error('Error deleting file:', unlinkErr);
+                                    reject(unlinkErr);
+                                }
+                                resolve({ [documentType]: data.Location });
+                            });
+                        }
+                    });
+                });
+            });
+
+            let uploadedFilesLocations = await Promise.all(uploadPromises);
+
+            // Combine all file locations into one object
+            let companyFiles = Object.assign({}, ...uploadedFilesLocations);
+
+            const updatedUser = await Company.findByIdAndUpdate(organizationId, {
+                '$set': { 'verificationDoc': companyFiles, 'documentstatus': true }
+            });
+
+            if (updatedUser) {
+                res.send("Uploaded Successfully");
+            } else {
+                res.send("Something Went Wrong");
+            }
+        } else {
+            res.status(404).send("Company not found");
+        }
+    } catch (error) {
+        res.status(500).send(error.message || "An error occurred");
+    }
+
+});
+
+app.get('/company-details', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await Company.findOne({ _id: userID }, { password: 0, _id: 0 });
+        if (userExist) {
+            res.status(200).json({ data: userExist, status: 'ok' })
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+//Fetch All Company Data
+app.get("/getAllCompany", fetchUser, async (req, res) => {
+
+    try {
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+        const companyID = req.params.ID;
+        if (adminExist) {
+            const allCompany = await Company.find({});
+            res.send({ status: "ok", data: allCompany });
+        } else {
+            res.status(404).send("Admin not found");
+        }
+    } catch (error) {
+        res.status(500).send(error.message || "An error occurred");
+    }
+});
+
+
+app.get('/companyverifiedornot', fetchUser, async (req, res) => {
+    try {
+        const userID = req.user.id;
+        const userExist = await Company.findOne({ _id: userID }, { password: 0, _id: 0 });
+
+        if (userExist) {
+
+            const response = await Company.findOne(
+                {
+                    isverified: userExist.isverified,
+                    documentstatus: userExist.documentstatus,
+                })
+            console.log(response);
+            if (response) {
+                res.status(200).json({ data: response, status: "ok", })
+            } else {
+                res.status(200).json({ message: "something went wrong" })
+            }
+        } else {
+            res.status(200).json({ message: "User does not exist" });
+        }
+
+    } catch (error) {
+        console.log(error);
+    }
+})
+
+
+
+
+
+
+
+
+
+//////////////////////////////////////// Register Freelancer Technicians ////////////////////////////////////////////
+
 app.get('/technician-details', fetchUser, async (req, res) => {
     try {
         const userID = req.user.id;
@@ -1413,31 +1917,107 @@ app.get('/technician-details', fetchUser, async (req, res) => {
     }
 })
 
-// Technician Register API
-app.post("/technician-register", async (req, res) => {
-    const { fname, username, email, phone, userType, password, base64 } = req.body;
-    const encryptedPassword = await bcrypt.hash(password, 10);
-    try {
-        // image.create({ image: base64 }
-        const user = await Technician.create({
-            fname,
-            username,
-            email,
-            phone,
-            image: base64,
-            password: encryptedPassword,
-        });
 
-        if (user) {
-            res.status(200).json({ message: "user created", status: "ok" });
-        } else {
-            res.status(200).json({ message: "problem in creating the user", status: "ok" });
+// Technician Register API
+app.post('/technician-register', async (req, res) => {
+    try {
+        const { username, fname, password, email, phone, emiratesId, passportno, organizationId } = req.body;
+
+        // Check if the email is already registered for the same organization
+        const existingUser = await Technician.findOne({ username, email, organizationId });
+
+        if (existingUser) {
+            return res.status(400).json({ message: 'Email already registered for this organization' });
         }
 
+        // Create a new user
+        const encryptedPassword = await bcrypt.hash(password, 10);
+        const newUser = new Technician({
+            username,
+            fname,
+            password: encryptedPassword,
+            email,
+            phone,
+            emiratesId,
+            passportno,
+            organizationId,
+        });
+
+        // Save the new user to the database
+        await newUser.save();
+
+        // Respond with success
+        res.status(201).json({ message: 'Registration successful', status: 'ok' });
     } catch (error) {
-        res.send({ message: "error", error });
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
     }
 });
+
+
+
+app.post('/uploadsdocuments', fetchUser, upload.array('file', 5), async (req, res) => {
+    try {
+        console.log("hitting");
+        const technicianId = req.user.id;
+        const technicianExist = await Technician.findById(technicianId);
+
+        if (!technicianExist) {
+            return res.status(404).send("Technician not found");
+        }
+
+        let s3 = new aws.S3();
+        let uploadPromises = req.files.map((file) => {
+            return new Promise((resolve, reject) => {
+                const { path, filename, originalname } = file;
+                const documentType = originalname.split("-")[0];
+                const key = `${uid()}-${filename}`;
+                const uploadParams = { Bucket: 'gadgetsrebon', Key: key, Body: fs.createReadStream(path), ACL: 'public-read' };
+
+                s3.upload(uploadParams, function (err, data) {
+                    if (err) {
+                        console.log("Error", err);
+                        reject(err);
+                    } else {
+                        fs.unlink(path, (unlinkErr) => {
+                            if (unlinkErr) {
+                                console.error('Error deleting file:', unlinkErr);
+                                reject(unlinkErr);
+                            }
+                            resolve({ [documentType]: data.Location });
+                        });
+                    }
+                });
+            });
+        });
+
+        let uploadedFilesLocations = await Promise.all(uploadPromises);
+
+        // Combine all file locations into one object
+        let technicianFiles = Object.assign({}, ...uploadedFilesLocations);
+
+        // Update technician's document information in the database
+        const updatedUser = await Technician.findByIdAndUpdate(technicianId, {
+            '$set': { 'verificationDoc': technicianFiles }
+        });
+
+        if (updatedUser) {
+            res.send("Uploaded successfully");
+        } else {
+            res.send("Something went wrong");
+        }
+    } catch (error) {
+        console.error("Error handling upload request:", error);
+        res.status(500).send(error.message || "An error occurred");
+    }
+});
+
+
+
+
+
+
+
 
 app.post('/technician-email-verification', async (req, res) => {
     try {
@@ -1495,7 +2075,7 @@ app.post('/technician-otp-verification', async (req, res) => {
 app.post('/technician-mobile-otp', async (req, res) => {
     try {
         console.log("reached");
-        const phonenumber = "+" + req.body.phone;
+        const phonenumber = req.body.phone;
 
         const oldPhone = await Technician.findOne({ phone: req.body.phone });
 
@@ -1867,6 +2447,28 @@ app.get('/technicianVerify/:ID', fetchUser, async (req, res) => {
 })
 
 
+app.get('/companyVerify/:ID', fetchUser, async (req, res) => {
+    try {
+        const adminID = req.user.id;
+        const adminExist = await Admin.findOne({ _id: adminID }, { password: 0 });
+        const companyID = req.params.ID;
+        if (adminExist) {
+            const updatedCompany = await Company.findByIdAndUpdate(companyID, {
+                '$set': { 'isverified': true }
+            });
+
+            if (updatedCompany) {
+                res.status(200).json({ message: "Company verified sucessfully" });
+            }
+        } else {
+            res.status(404).send("Admin not found");
+        }
+    } catch (error) {
+        res.status(500).send(error.message || "An error occurred");
+    }
+})
+
+
 app.post("/login-admin", async (req, res) => {
 
     try {
@@ -2142,6 +2744,195 @@ app.post('/notifications/mark-as-read/:notificationId', fetchUser, async (req, r
     }
 });
 
+
+///////////////////////////////// Admin Panel Console ///////////////////////////////////////////////
+
+// Admin Panel Types, Modals, Brand & defect Options
+app.post("/types", async (req, res) => {
+    try {
+        // Extract type data from the request body
+        const { name } = req.body;
+
+        // Check if the type with the same name already exists
+        const existingType = await Type.findOne({ name });
+
+        if (existingType) {
+            // If the type already exists, return an error response
+            return res.status(400).json({ message: "Type with the same name already exists" });
+        }
+
+        // Create a new instance of the Type model
+        const newType = new Type({ name });
+
+        // Save the new type instance to the database
+        await newType.save();
+
+        // Send a success response
+        res.status(201).json({ message: "Type added successfully", type: newType });
+    } catch (error) {
+        // Send an error response if something goes wrong
+        console.error(error);
+        res.status(500).json({ message: "Error adding type", error: error.message });
+    }
+});
+
+app.post("/mobilebrands", async (req, res) => {
+    try {
+        const { name, type } = req.body;
+
+        // Check if brand name already exists and is connected with any type
+        const existingBrand = await Mobilebrands.findOne({ name, type });
+
+        if (existingBrand !== null && existingBrand !== undefined) {
+            // Brand name already exists and is connected with the provided type
+            return res.status(400).json({ message: "Brand name already exists and is connected with the provided type" });
+        }
+
+        // Brand name does not exist or is not connected with the provided type, proceed with adding the brand
+        const newBrand = new Mobilebrands({ name, type });
+        await newBrand.save();
+        res.status(201).json({ message: "Brand added successfully", brand: newBrand });
+        console.log(newBrand);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error adding brand", error: error.message });
+    }
+});
+
+
+app.post("/series", async (req, res) => {
+    try {
+        const { seriesname, brand, type } = req.body;
+
+        // Check if a series with the same name, brand, and type already exists
+        const existingSeries = await Series.findOne({ seriesname, brand, type });
+
+        if (existingSeries) {
+            // Series with the same name, brand, and type already exists
+            return res.status(400).json({ message: "Series with the same name, brand, and type already exists" });
+        }
+
+        // Series does not exist, proceed with adding the new series
+        const newSeries = new Series({ seriesname, brand, type });
+        await newSeries.save();
+
+        res.status(201).json({ message: "Series added successfully", series: newSeries });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error adding series", error: error.message });
+    }
+});
+
+app.post("/modals", async (req, res) => {
+    try {
+        const { modelname, series, brand, type } = req.body;
+
+        // Check if a modal with the same modelname, series, brand, and type already exists
+        const existingModal = await Models.findOne({ modelname, series, brand, type });
+
+        if (existingModal) {
+            // Modal with the same details already exists
+            return res.status(400).json({ message: "Modal with the same details already exists" });
+        }
+
+        // Modal does not exist, proceed with adding the new modal
+        const newModal = new Models({ modelname, series, brand, type });
+        await newModal.save();
+
+        res.status(201).json({ message: "Modal added successfully", modal: newModal });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error adding modal", error: error.message });
+    }
+});
+
+
+app.post("/defects", async (req, res) => {
+    try {
+        const { defectname, model, type, brand, series } = req.body;
+
+        // Check if the defect name already exists for the given type, brand, series, and model
+        const existingDefect = await Defect.findOne({ defectname, model, type, brand, series });
+        if (existingDefect) {
+            return res.status(400).json({ message: "Defect with the same name and details already exists" });
+        }
+
+        // Defect does not exist, proceed with adding the new defect
+        const newDefect = new Defect({ defectname, model, type, brand, series });
+        await newDefect.save();
+        res.status(201).json({ message: "Defect added successfully", defect: newDefect });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error adding defect", error: error.message });
+    }
+});
+
+
+app.get("/gettypes", async (req, res) => {
+    try {
+        const types = await Type.find();
+        res.status(200).json(types);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error fetching types", error: error.message });
+    }
+});
+
+app.get("/getbrands", async (req, res) => {
+    try {
+        const brands = await Mobilebrands.find().populate('type');
+        res.status(200).json(brands);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error fetching brands", error: error.message });
+    }
+});
+
+app.get("/getbrands/:typeId", async (req, res) => {
+    try {
+        const typeId = req.params.typeId;
+        // Assuming Mobilebrands is your Mongoose model
+        const brands = await Mobilebrands.find({ type: typeId });
+        res.status(200).json(brands);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error fetching brands", error: error.message });
+    }
+});
+
+app.get("/getseries", async (req, res) => {
+    try {
+        const series = await Series.find().populate('brand').populate('type');
+        res.status(200).json(series);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error fetching series", error: error.message });
+    }
+});
+
+app.get("/getmodals", async (req, res) => {
+    try {
+        const modals = await Models.find().populate('series').populate('brand').populate('type');
+        res.status(200).json(modals);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error fetching modals", error: error.message });
+    }
+});
+
+app.get("/getdefects", async (req, res) => {
+    try {
+        const defects = await Defect.find()
+            .populate('model')
+            .populate('series')
+            .populate('brand')
+            .populate('type');
+        res.status(200).json(defects);
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: "Error fetching defects", error: error.message });
+    }
+});
 
 
 
