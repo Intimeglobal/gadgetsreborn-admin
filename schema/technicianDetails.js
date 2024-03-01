@@ -28,9 +28,9 @@ const TechnicianDetailsSchema = new mongoose.Schema({
         address: { type: String, default: "" },
     }],
     verificationDoc: {
-        Passportdoc: { type: String, default: "" },
-        EmiratesIDdoc: { type: String, default: "" },
-        Photographdoc: { type: String, default: "" }
+        Passport: { type: String, default: "" },
+        EmiratesID: { type: String, default: "" },
+        Photograph: { type: String, default: "" }
     },
     bankDetails: {
         Fullname: { type: String, default: "" },

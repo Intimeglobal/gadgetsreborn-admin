@@ -76,6 +76,7 @@ require("./schema/brand");
 require("./schema/series");
 require("./schema/modal");
 require("./schema/defect");
+require("./schema/warrantyplans");
 
 
 const User = mongoose.model("UserInfo");
@@ -92,13 +93,17 @@ const Mobilebrands = mongoose.model("BrandInfo");
 const Series = mongoose.model("SeriesInfo");
 const Models = mongoose.model("ModelInfo");
 const Defect = mongoose.model("DefectInfo");
+const WarrantyPlans = mongoose.model("WarrantyPlans");
 
 
-const accountSid = "AC76ab0a9ce0f377a72c7c1ca6dc8c432a";
+
+// const accountSid = "AC76ab0a9ce0f377a72c7c1ca6dc8c432a"; Twillio mohit account
+const accountSid = "AC8986006bf9c90316799f044073a62549";
 const authToken = process.env.TWILIO_AUTH_TOKEN;
 const client = twilio(accountSid, authToken);
 
-const servicesid = 'VA3072be8c6102f371a7fcd7ffdc7a2b46'
+// const servicesid = 'VA3072be8c6102f371a7fcd7ffdc7a2b46' - Twillio mohit account
+const servicesid = 'VA382685147ee510eee7dbbc7f40a7af7c'
 const aws = require('aws-sdk');
 const fs = require('fs');
 
@@ -872,18 +877,29 @@ app.get('/total-technicians', async (req, res) => {
 });
 
 // Warranty API
-app.post("/warrantyadded", async (req, res) => {
-    const { warrantyname, warrantystart, warrantyvalidthrough, warrantyprice } = req.body;
+app.post("/warranty-plans", async (req, res) => {
     try {
-        await Warranty.create({
-            warrantyname,
-            warrantyprice,
+        const { planname, tenure, planmetricamountpercentage, deductible, applicableto } = req.body;
+
+        // Create a new warranty plan document
+        const warrantyPlan = new WarrantyPlans({
+            planname,
+            tenure,
+            planmetricamountpercentage,
+            deductible,
+            applicableto,
         });
-        res.send({ status: "ok" });
+
+        // Save the document to the database
+        await warrantyPlan.save();
+
+        res.status(201).json({ message: "Warranty plan created successfully", warrantyPlan });
     } catch (error) {
-        res.send({ status: "error", error });
+        console.error("Error creating warranty plan:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
 });
+
 
 app.get("/getwarrantydata", async (req, res) => {
     try {
@@ -1865,6 +1881,20 @@ app.get("/getAllCompany", fetchUser, async (req, res) => {
 });
 
 
+// Fetch Loggedin Company Data 
+app.get("/getUserDetails", fetchUser, async (req, res) => {
+    try {
+        // Assuming fetchUser middleware sets req.user with user details
+        const user = req.user;
+        res.status(200).json({ message: "User details found", user });
+    } catch (error) {
+        res.status(500).json({ message: "Error occurred while fetching user details", error: error.message });
+    }
+});
+
+
+
+
 app.get('/companyverifiedornot', fetchUser, async (req, res) => {
     try {
         const userID = req.user.id;
@@ -1924,10 +1954,24 @@ app.post('/technician-register', async (req, res) => {
         const { username, fname, password, email, phone, emiratesId, passportno, organizationId } = req.body;
 
         // Check if the email is already registered for the same organization
-        const existingUser = await Technician.findOne({ username, email, organizationId });
+        const existingUserWithEmail = await Technician.findOne({ email, organizationId });
+        const existingUserWithPhone = await Technician.findOne({ phone, organizationId });
+        const existingUserWithEmiratesId = await Technician.findOne({ emiratesId, organizationId });
 
-        if (existingUser) {
+        if (existingUserWithEmail && existingUserWithPhone && existingUserWithEmiratesId) {
+            return res.status(400).json({ message: 'Email, phone number, and Emirates ID already registered for this organization' });
+        } else if (existingUserWithEmail && existingUserWithPhone) {
+            return res.status(400).json({ message: 'Email and phone number already registered for this organization' });
+        } else if (existingUserWithEmail && existingUserWithEmiratesId) {
+            return res.status(400).json({ message: 'Email and Emirates ID already registered for this organization' });
+        } else if (existingUserWithPhone && existingUserWithEmiratesId) {
+            return res.status(400).json({ message: 'Phone number and Emirates ID already registered for this organization' });
+        } else if (existingUserWithEmail) {
             return res.status(400).json({ message: 'Email already registered for this organization' });
+        } else if (existingUserWithPhone) {
+            return res.status(400).json({ message: 'Phone number already registered for this organization' });
+        } else if (existingUserWithEmiratesId) {
+            return res.status(400).json({ message: 'Emirates ID already registered for this organization' });
         }
 
         // Create a new user
@@ -1941,13 +1985,22 @@ app.post('/technician-register', async (req, res) => {
             emiratesId,
             passportno,
             organizationId,
+            isOrganization: true
         });
 
         // Save the new user to the database
         await newUser.save();
 
         // Respond with success
-        res.status(201).json({ message: 'Registration successful', status: 'ok' });
+        res.status(201).json({ message: 'Registration successful', status: 'ok', id: newUser._id });
+
+        // if status is ok and technician will be added then add the technican id into the Company Schema
+        const company = await Company.findOne({ organizationId });
+        if (company) {
+            company.technician.push({ technicianId: newUser.technicianId });
+            await company.save();
+        }
+
     } catch (error) {
         console.error(error);
         res.status(500).json({ message: 'Internal Server Error' });
@@ -1955,68 +2008,87 @@ app.post('/technician-register', async (req, res) => {
 });
 
 
-
-app.post('/uploadsdocuments', fetchUser, upload.array('file', 5), async (req, res) => {
+app.post('/uploadsdocuments/:ID', fetchUser, upload.array('file', 5), async (req, res) => {
     try {
         console.log("hitting");
-        const technicianId = req.user.id;
-        const technicianExist = await Technician.findById(technicianId);
+        const technicianId = req.params.ID;
+        console.log(technicianId);
+        const technicianExist = await Technician.findOne({ _id: technicianId }, { password: 0 });
 
-        if (!technicianExist) {
-            return res.status(404).send("Technician not found");
-        }
+        if (technicianExist) {
+            let s3 = new aws.S3();
+            let uploadPromises = req.files.map((file) => {
+                return new Promise((resolve, reject) => {
+                    const { path, filename, originalname } = file;
+                    const documentType = originalname.split("-")[0];
+                    let uploadParams = { Bucket: 'gadgetsrebon', Key: '', Body: '', ACL: 'public-read' };
+                    let fileName = uid() + filename;
 
-        let s3 = new aws.S3();
-        let uploadPromises = req.files.map((file) => {
-            return new Promise((resolve, reject) => {
-                const { path, filename, originalname } = file;
-                const documentType = originalname.split("-")[0];
-                const key = `${uid()}-${filename}`;
-                const uploadParams = { Bucket: 'gadgetsrebon', Key: key, Body: fs.createReadStream(path), ACL: 'public-read' };
-
-                s3.upload(uploadParams, function (err, data) {
-                    if (err) {
-                        console.log("Error", err);
+                    let fileStream = fs.createReadStream(path);
+                    fileStream.on('error', function (err) {
+                        console.log('File Error', err);
                         reject(err);
-                    } else {
-                        fs.unlink(path, (unlinkErr) => {
-                            if (unlinkErr) {
-                                console.error('Error deleting file:', unlinkErr);
-                                reject(unlinkErr);
-                            }
-                            resolve({ [documentType]: data.Location });
-                        });
-                    }
+                    });
+
+                    uploadParams.Body = fileStream;
+                    uploadParams.Key = fileName;
+
+                    s3.upload(uploadParams, function (err, data) {
+                        if (err) {
+                            console.log("Error", err);
+                            reject(err);
+                        } else {
+                            fs.unlink(path, (unlinkErr) => {
+                                if (unlinkErr) {
+                                    console.error('Error deleting file:', unlinkErr);
+                                    reject(unlinkErr);
+                                }
+                                resolve({ [documentType]: data.Location });
+                            });
+                        }
+                    });
                 });
             });
-        });
 
-        let uploadedFilesLocations = await Promise.all(uploadPromises);
+            let uploadedFilesLocations = await Promise.all(uploadPromises);
 
-        // Combine all file locations into one object
-        let technicianFiles = Object.assign({}, ...uploadedFilesLocations);
+            // Combine all file locations into one object
+            let technicianFiles = Object.assign({}, ...uploadedFilesLocations);
 
-        // Update technician's document information in the database
-        const updatedUser = await Technician.findByIdAndUpdate(technicianId, {
-            '$set': { 'verificationDoc': technicianFiles }
-        });
+            const updatedUser = await Technician.findByIdAndUpdate(technicianId, {
+                '$set': { 'verificationDoc': technicianFiles }
+            });
 
-        if (updatedUser) {
-            res.send("Uploaded successfully");
+            if (updatedUser) {
+                res.send("uploaded successfully");
+            } else {
+                res.send("something went wrong");
+            }
         } else {
-            res.send("Something went wrong");
+            res.status(404).send("Technician not found");
         }
     } catch (error) {
-        console.error("Error handling upload request:", error);
         res.status(500).send(error.message || "An error occurred");
     }
+
 });
 
 
 
+app.get('/technicians/:organizationId', async (req, res) => {
+    try {
+        const { organizationId } = req.params;
 
+        // Find all technicians with the specified organizationId
+        const technicians = await Technician.find({ organizationId: organizationId });
 
-
+        // Respond with the list of technicians
+        res.status(200).json({ technicians: technicians });
+    } catch (error) {
+        console.error(error);
+        res.status(500).json({ message: 'Internal Server Error' });
+    }
+});
 
 
 app.post('/technician-email-verification', async (req, res) => {
@@ -2432,7 +2504,7 @@ app.get('/technicianVerify/:ID', fetchUser, async (req, res) => {
         const technicianID = req.params.ID;
         if (adminExist) {
             const updatedUser = await Technician.findByIdAndUpdate(technicianID, {
-                '$set': { 'isverified': true }
+                '$set': { 'isverifiedtech': true }
             });
 
             if (updatedUser) {
